@@ -1,12 +1,12 @@
 ﻿function GetPluginSettings()
 {
 	return {
-		"name":			"MyPlugin",				// as appears in 'insert object' dialog, can be changed as long as "id" stays the same
-		"id":			"MyPlugin",				// this is used to identify this plugin and is saved to the project; never change it
+		"name":			"Spine",				// as appears in 'insert object' dialog, can be changed as long as "id" stays the same
+		"id":			"SpinePlugin",			// this is used to identify this plugin and is saved to the project; never change it
 		"version":		"1.0",					// (float in x.y format) Plugin version - C2 shows compatibility warnings based on this
-		"description":	"<appears at the bottom of the insert object dialog>",
-		"author":		"<your name/organisation>",
-		"help url":		"<your website or a manual entry on Scirra.com>",
+		"description":	"Create a Spine animation object.",
+		"author":		"Flyover Games, LLC",
+		"help url":		"https://www.scirra.com/manual/106/plugin-reference",
 		"category":		"General",				// Prefer to re-use existing categories, but you can set anything here
 		"type":			"world",				// either "world" (appears in layout and is drawn), else "object"
 		"rotatable":	true,					// only used when "type" is "world".  Enables an angle property on the object.
@@ -101,7 +101,10 @@ ACESDone();
 // new cr.Property(ept_link,		name,	link_text,		description, "firstonly")		// has no associated value; simply calls "OnPropertyChanged" on click
 
 var property_list = [
-	new cr.Property(ept_integer, 	"My property",		77,		"An example property.")
+	new cr.Property(ept_text,		"Spine Data URL",	"",		"Spine data file from export."),
+	new cr.Property(ept_text,		"Atlas Data URL",	"",		"Atlas data file from export."),
+	new cr.Property(ept_text,		"Skin Key",			"",		"Skin Key"),
+	new cr.Property(ept_text,		"Anim Key",			"",		"Anim Key")
 	];
 	
 // Called by IDE when a new object type is to be created
@@ -164,6 +167,19 @@ IDEInstance.prototype.OnRendererInit = function(renderer)
 // Called to draw self in the editor if a layout object
 IDEInstance.prototype.Draw = function(renderer)
 {
+	var q = this.instance.GetBoundingQuad();
+	var tl = new cr.vector2(q.tlx, q.tly);
+	var tr = new cr.vector2(q.trx, q.try_);
+	var br = new cr.vector2(q.brx, q.bry);
+	var bl = new cr.vector2(q.blx, q.bly);
+	var c = cr.RGB(0, 0, 255);
+	renderer.Line(tl, tr, c);
+	renderer.Line(tr, br, c);
+	renderer.Line(br, bl, c);
+	renderer.Line(bl, tl, c);
+	var c = cr.RGB(255, 0, 0);
+	renderer.Line(tl, br, c);
+	renderer.Line(bl, tr, c);
 }
 
 // For rendered objects to release fonts or textures

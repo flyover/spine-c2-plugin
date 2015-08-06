@@ -8,7 +8,7 @@ assert2(cr.plugins_, "cr.plugins_ not created");
 // Plugin class
 // *** CHANGE THE PLUGIN ID HERE *** - must match the "id" property in edittime.js
 //          vvvvvvvv
-cr.plugins_.MyPlugin = function(runtime)
+cr.plugins_.SpinePlugin = function(runtime)
 {
 	this.runtime = runtime;
 };
@@ -18,7 +18,7 @@ cr.plugins_.MyPlugin = function(runtime)
 	/////////////////////////////////////
 	// *** CHANGE THE PLUGIN ID HERE *** - must match the "id" property in edittime.js
 	//                            vvvvvvvv
-	var pluginProto = cr.plugins_.MyPlugin.prototype;
+	var pluginProto = cr.plugins_.SpinePlugin.prototype;
 		
 	/////////////////////////////////////
 	// Object type class
@@ -54,6 +54,121 @@ cr.plugins_.MyPlugin = function(runtime)
 		// note the object is sealed after this call; ensure any properties you'll ever need are set on the object
 		// e.g...
 		// this.myValue = 0;
+
+		var instance = this;
+
+		var gl = this.runtime.gl;
+		if (gl)
+		{
+			console.log("WebGL Enabled");
+			console.log(gl.getParameter(gl.VERSION));
+			instance.render_webgl = new renderWebGL(gl);
+			instance.gl_stack = createGLStateStack(gl);
+		}
+
+		var ctx = this.runtime.ctx;
+		if (ctx)
+		{
+			console.log("2D Context Enabled");
+			instance.render_ctx2d = new renderCtx2D(ctx);
+		}
+
+		var spine_url = instance.properties[0];
+		var atlas_url = instance.properties[1] || "";
+		var skin_key = instance.properties[2] || "";
+		var anim_key = instance.properties[3] || "";
+		console.log("Spine Data URL", spine_url);
+		console.log("Atlas Data URL", atlas_url);
+		console.log("Skin Key", skin_key);
+		console.log("Anim Key", anim_key);
+
+		instance.loading = true;
+		instance.spine_pose = null;
+		instance.atlas_data = null;
+
+		loadText(spine_url, function (err, text)
+		{
+			if (err)
+			{
+				console.log(err, text);
+				return;
+			}
+
+			instance.spine_pose = new spine.Pose(new spine.Data().load(JSON.parse(text)));
+
+			console.log("Spine Data Version", instance.spine_pose.data.skeleton.spine);
+
+			//instance.width = instance.spine_pose.data.skeleton.width || instance.width;
+			//instance.height = instance.spine_pose.data.skeleton.height || instance.height;
+			//instance.set_bbox_changed();
+
+			console.log("Skin Keys", instance.spine_pose.data.skin_keys);
+			instance.spine_pose.setSkin(skin_key);
+
+			console.log("Anim Keys", instance.spine_pose.data.anim_keys);
+			instance.spine_pose.setAnim(anim_key);
+
+			loadText(atlas_url, function (err, text)
+			{
+				var images = {};
+
+				var counter = 0;
+				var counter_inc = function () { counter++; }
+				var counter_dec = function ()
+				{
+					if (--counter === 0)
+					{
+						if (instance.render_webgl)
+						{
+							instance.render_webgl.loadPose(instance.spine_pose, instance.atlas_data, images);
+						}
+						if (instance.render_ctx2d)
+						{
+							instance.render_ctx2d.loadPose(instance.spine_pose, instance.atlas_data, images);
+						}
+
+						instance.runtime.redraw = true;
+						instance.loading = false;
+					}
+				}
+
+				counter_inc();
+
+				if (!err && text)
+				{
+					instance.atlas_data = new atlas.Data().import(text);
+
+					// load atlas page images
+					instance.atlas_data.pages.forEach(function (page)
+					{
+						var image_key = page.name;
+						var image_url = image_key;
+						console.log("Atlas Image URL", image_url);
+
+						counter_inc();
+						images[image_key] = loadImage(image_url, (function (image_key) { return function (err, image)
+						{
+							if (err)
+							{
+								console.log(err, text);
+								return;
+							}
+
+							console.log("Atlas Image", image.width, "x", image.height, image.src);
+							counter_dec();
+						}})(image_key));
+					});
+				}
+				else
+				{
+					// TODO: load attachment images
+				}
+
+				counter_dec();
+			});
+		});
+
+		this.runtime.tickMe(this);
 	};
 	
 	// called whenever an instance is destroyed
@@ -61,6 +176,50 @@ cr.plugins_.MyPlugin = function(runtime)
 	// to release/recycle/reset any references to other objects in this function.
 	instanceProto.onDestroy = function ()
 	{
+		var instance = this;
+
+		var gl = this.runtime.gl;
+		if (gl)
+		{
+			console.log("WebGL Enabled");
+			console.log(gl.getParameter(gl.VERSION));
+		}
+
+		var ctx = this.runtime.ctx;
+		if (ctx)
+		{
+			console.log("2D Context Enabled");
+		}
+
+		if (instance.render_webgl)
+		{
+			if (instance.spine_pose)
+			{
+				instance.render_webgl.dropPose(instance.spine_pose, instance.atlas_data);
+			}
+
+			instance.render_webgl = null;
+		}
+
+		if (instance.render_ctx2d)
+		{
+			if (instance.spine_pose)
+			{
+				instance.render_ctx2d.dropPose(instance.spine_pose, instance.atlas_data);
+			}
+
+			instance.render_ctx2d = null;
+		}
+
+		if (instance.spine_pose)
+		{
+			instance.spine_pose = null;
+		}
+
+		if (instance.atlas_data)
+		{
+			instance.atlas_data = null;
+		}
 	};
 	
 	// called when saving the full state of the game
@@ -84,10 +243,52 @@ cr.plugins_.MyPlugin = function(runtime)
 		// note you MUST use double-quote syntax (e.g. o["property"]) to prevent
 		// Closure Compiler renaming and breaking the save format
 	};
+
+	instanceProto.tick = function()
+	{
+		var instance = this;
+
+		if (!instance.loading && instance.spine_pose)
+		{
+			var dt = this.runtime.getDt(this);
+			instance.spine_pose.update(dt * 1000);
+			instance.spine_pose.strike();
+			instance.runtime.redraw = true;
+		}
+	}
 	
 	// only called if a layout object - draw to a canvas 2D context
 	instanceProto.draw = function(ctx)
 	{
+		var instance = this;
+
+		if (ctx !== this.runtime.ctx)
+		{
+			console.log("error: ctx", ctx, this.runtime.ctx);
+		}
+
+		if (!instance.loading && instance.render_ctx2d && instance.spine_pose)
+		{
+			ctx.save();
+
+			// origin at center, x right, y up
+			ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2); ctx.scale(1, -1);
+
+			var tx = instance.x - (ctx.canvas.width/2);
+			var ty = (ctx.canvas.height/2) - instance.y;
+			var rz = -instance.angle;
+			var sx = 0.5 * instance.width / instance.spine_pose.data.skeleton.width;
+			var sy = 0.5 * instance.height / instance.spine_pose.data.skeleton.height;
+
+			ctx.translate(tx, ty);
+			ctx.rotate(rz);
+			ctx.scale(sx, sy);
+			ctx.lineWidth = 1 / Math.max(sx, sy);
+
+			instance.render_ctx2d.drawPose(instance.spine_pose, instance.atlas_data);
+
+			ctx.restore();
+		}
 	};
 	
 	// only called if a layout object in WebGL mode - draw to the WebGL context
@@ -95,6 +296,40 @@ cr.plugins_.MyPlugin = function(runtime)
 	// directory or just copy what other plugins do.
 	instanceProto.drawGL = function (glw)
 	{
+		var instance = this;
+
+		if (glw.gl !== this.runtime.gl)
+		{
+			console.log("error: gl", glw.gl, this.runtime.gl);
+		}
+
+		if (!instance.loading && instance.render_webgl && instance.spine_pose)
+		{
+			glw.endBatch();
+
+			var gl = instance.runtime.gl;
+
+			instance.gl_stack.push();
+
+			var gl_projection = instance.render_webgl.gl_projection;
+
+			mat3x3Identity(gl_projection);
+			mat3x3Ortho(gl_projection, -gl.canvas.width/2, gl.canvas.width/2, -gl.canvas.height/2, gl.canvas.height/2);
+
+			var tx = instance.x - (gl.canvas.width/2);
+			var ty = (gl.canvas.height/2) - instance.y;
+			var rz = -instance.angle;
+			var sx = 0.5 * instance.width / instance.spine_pose.data.skeleton.width;
+			var sy = 0.5 * instance.height / instance.spine_pose.data.skeleton.height;
+
+			mat3x3Translate(gl_projection, tx, ty);
+			mat3x3Rotate(gl_projection, rz);
+			mat3x3Scale(gl_projection, sx, sy);
+
+			instance.render_webgl.drawPose(instance.spine_pose, instance.atlas_data);
+
+			instance.gl_stack.pop();
+		}
 	};
 	
 	// The comments around these functions ensure they are removed when exporting, since the
