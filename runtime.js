@@ -62,8 +62,8 @@ cr.plugins_.SpinePlugin = function(runtime)
 		{
 			console.log("WebGL Enabled");
 			console.log(gl.getParameter(gl.VERSION));
-			instance.render_webgl = new renderWebGL(gl);
-			instance.gl_stack = createGLStateStack(gl);
+			instance.extra.render_webgl = new renderWebGL(gl);
+			instance.extra.gl_stack = createGLStateStack(gl);
 		}
 
 		var ctx = this.runtime.ctx;
@@ -82,9 +82,9 @@ cr.plugins_.SpinePlugin = function(runtime)
 		console.log("Skin Key", skin_key);
 		console.log("Anim Key", anim_key);
 
-		instance.loading = true;
-		instance.spine_pose = null;
-		instance.atlas_data = null;
+		instance.extra.loading = true;
+		instance.extra.spine_pose = null;
+		instance.extra.atlas_data = null;
 
 		loadText(spine_url, function (err, text)
 		{
@@ -94,19 +94,19 @@ cr.plugins_.SpinePlugin = function(runtime)
 				return;
 			}
 
-			instance.spine_pose = new spine.Pose(new spine.Data().load(JSON.parse(text)));
+			instance.extra.spine_pose = new spine.Pose(new spine.Data().load(JSON.parse(text)));
 
-			console.log("Spine Data Version", instance.spine_pose.data.skeleton.spine);
+			console.log("Spine Data Version", instance.extra.spine_pose.data.skeleton.spine);
 
-			//instance.width = instance.spine_pose.data.skeleton.width || instance.width;
-			//instance.height = instance.spine_pose.data.skeleton.height || instance.height;
+			//instance.width = instance.extra.spine_pose.data.skeleton.width || instance.width;
+			//instance.height = instance.extra.spine_pose.data.skeleton.height || instance.height;
 			//instance.set_bbox_changed();
 
-			console.log("Skin Keys", instance.spine_pose.data.skin_keys);
-			instance.spine_pose.setSkin(skin_key);
+			console.log("Skin Keys", instance.extra.spine_pose.data.skin_keys);
+			instance.extra.spine_pose.setSkin(skin_key);
 
-			console.log("Anim Keys", instance.spine_pose.data.anim_keys);
-			instance.spine_pose.setAnim(anim_key);
+			console.log("Anim Keys", instance.extra.spine_pose.data.anim_keys);
+			instance.extra.spine_pose.setAnim(anim_key);
 
 			loadText(atlas_url, function (err, text)
 			{
@@ -118,17 +118,17 @@ cr.plugins_.SpinePlugin = function(runtime)
 				{
 					if (--counter === 0)
 					{
-						if (instance.render_webgl)
+						if (instance.extra.render_webgl)
 						{
-							instance.render_webgl.loadPose(instance.spine_pose, instance.atlas_data, images);
+							instance.extra.render_webgl.loadPose(instance.extra.spine_pose, instance.extra.atlas_data, images);
 						}
-						if (instance.render_ctx2d)
+						if (instance.extra.render_ctx2d)
 						{
-							instance.render_ctx2d.loadPose(instance.spine_pose, instance.atlas_data, images);
+							instance.extra.render_ctx2d.loadPose(instance.extra.spine_pose, instance.extra.atlas_data, images);
 						}
 
 						instance.runtime.redraw = true;
-						instance.loading = false;
+						instance.extra.loading = false;
 					}
 				}
 
@@ -136,10 +136,10 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 				if (!err && text)
 				{
-					instance.atlas_data = new atlas.Data().import(text);
+					instance.extra.atlas_data = new atlas.Data().import(text);
 
 					// load atlas page images
-					instance.atlas_data.pages.forEach(function (page)
+					instance.extra.atlas_data.pages.forEach(function (page)
 					{
 						var image_key = page.name;
 						var image_url = image_key;
@@ -191,34 +191,34 @@ cr.plugins_.SpinePlugin = function(runtime)
 			console.log("2D Context Enabled");
 		}
 
-		if (instance.render_webgl)
+		if (instance.extra.render_webgl)
 		{
-			if (instance.spine_pose)
+			if (instance.extra.spine_pose)
 			{
-				instance.render_webgl.dropPose(instance.spine_pose, instance.atlas_data);
+				instance.extra.render_webgl.dropPose(instance.extra.spine_pose, instance.extra.atlas_data);
 			}
 
-			instance.render_webgl = null;
+			instance.extra.render_webgl = null;
 		}
 
-		if (instance.render_ctx2d)
+		if (instance.extra.render_ctx2d)
 		{
-			if (instance.spine_pose)
+			if (instance.extra.spine_pose)
 			{
-				instance.render_ctx2d.dropPose(instance.spine_pose, instance.atlas_data);
+				instance.extra.render_ctx2d.dropPose(instance.extra.spine_pose, instance.extra.atlas_data);
 			}
 
-			instance.render_ctx2d = null;
+			instance.extra.render_ctx2d = null;
 		}
 
-		if (instance.spine_pose)
+		if (instance.extra.spine_pose)
 		{
-			instance.spine_pose = null;
+			instance.extra.spine_pose = null;
 		}
 
-		if (instance.atlas_data)
+		if (instance.extra.atlas_data)
 		{
-			instance.atlas_data = null;
+			instance.extra.atlas_data = null;
 		}
 	};
 	
@@ -248,11 +248,11 @@ cr.plugins_.SpinePlugin = function(runtime)
 	{
 		var instance = this;
 
-		if (!instance.loading && instance.spine_pose)
+		if (!instance.extra.loading && instance.extra.spine_pose)
 		{
 			var dt = this.runtime.getDt(this);
-			instance.spine_pose.update(dt * 1000);
-			instance.spine_pose.strike();
+			instance.extra.spine_pose.update(dt * 1000);
+			instance.extra.spine_pose.strike();
 			instance.runtime.redraw = true;
 		}
 	}
@@ -267,7 +267,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 			console.log("error: ctx", ctx, this.runtime.ctx);
 		}
 
-		if (!instance.loading && instance.render_ctx2d && instance.spine_pose)
+		if (!instance.extra.loading && instance.extra.render_ctx2d && instance.extra.spine_pose)
 		{
 			ctx.save();
 
@@ -277,15 +277,15 @@ cr.plugins_.SpinePlugin = function(runtime)
 			var tx = instance.x - (ctx.canvas.width/2);
 			var ty = (ctx.canvas.height/2) - instance.y;
 			var rz = -instance.angle;
-			var sx = 0.5 * instance.width / instance.spine_pose.data.skeleton.width;
-			var sy = 0.5 * instance.height / instance.spine_pose.data.skeleton.height;
+			var sx = 0.5 * instance.width / instance.extra.spine_pose.data.skeleton.width;
+			var sy = 0.5 * instance.height / instance.extra.spine_pose.data.skeleton.height;
 
 			ctx.translate(tx, ty);
 			ctx.rotate(rz);
 			ctx.scale(sx, sy);
 			ctx.lineWidth = 1 / Math.max(sx, sy);
 
-			instance.render_ctx2d.drawPose(instance.spine_pose, instance.atlas_data);
+			instance.extra.render_ctx2d.drawPose(instance.extra.spine_pose, instance.extra.atlas_data);
 
 			ctx.restore();
 		}
@@ -303,15 +303,15 @@ cr.plugins_.SpinePlugin = function(runtime)
 			console.log("error: gl", glw.gl, this.runtime.gl);
 		}
 
-		if (!instance.loading && instance.render_webgl && instance.spine_pose)
+		if (!instance.extra.loading && instance.extra.render_webgl && instance.extra.spine_pose)
 		{
 			glw.endBatch();
 
 			var gl = instance.runtime.gl;
 
-			instance.gl_stack.push();
+			instance.extra.gl_stack.push();
 
-			var gl_projection = instance.render_webgl.gl_projection;
+			var gl_projection = instance.extra.render_webgl.gl_projection;
 
 			mat3x3Identity(gl_projection);
 			mat3x3Ortho(gl_projection, -gl.canvas.width/2, gl.canvas.width/2, -gl.canvas.height/2, gl.canvas.height/2);
@@ -319,16 +319,16 @@ cr.plugins_.SpinePlugin = function(runtime)
 			var tx = instance.x - (gl.canvas.width/2);
 			var ty = (gl.canvas.height/2) - instance.y;
 			var rz = -instance.angle;
-			var sx = 0.5 * instance.width / instance.spine_pose.data.skeleton.width;
-			var sy = 0.5 * instance.height / instance.spine_pose.data.skeleton.height;
+			var sx = 0.5 * instance.width / instance.extra.spine_pose.data.skeleton.width;
+			var sy = 0.5 * instance.height / instance.extra.spine_pose.data.skeleton.height;
 
 			mat3x3Translate(gl_projection, tx, ty);
 			mat3x3Rotate(gl_projection, rz);
 			mat3x3Scale(gl_projection, sx, sy);
 
-			instance.render_webgl.drawPose(instance.spine_pose, instance.atlas_data);
+			instance.extra.render_webgl.drawPose(instance.extra.spine_pose, instance.extra.atlas_data);
 
-			instance.gl_stack.pop();
+			instance.extra.gl_stack.pop();
 		}
 	};
 	
