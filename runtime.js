@@ -63,7 +63,6 @@ cr.plugins_.SpinePlugin = function(runtime)
 			console.log("WebGL Enabled");
 			console.log(gl.getParameter(gl.VERSION));
 			instance.extra.render_webgl = new renderWebGL(gl);
-			instance.extra.gl_stack = createGLStateStack(gl);
 		}
 
 		var ctx = this.runtime.ctx;
@@ -305,11 +304,11 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 		if (!instance.extra.loading && instance.extra.render_webgl && instance.extra.spine_pose)
 		{
+			/// suspend glwrap
+
 			glw.endBatch();
 
 			var gl = instance.runtime.gl;
-
-			instance.extra.gl_stack.push();
 
 			var gl_projection = instance.extra.render_webgl.gl_projection;
 
@@ -328,7 +327,24 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 			instance.extra.render_webgl.drawPose(instance.extra.spine_pose, instance.extra.atlas_data);
 
-			instance.extra.gl_stack.pop();
+			/// resume glwrap
+
+			// the Spine renderer might change this
+			glw.lastSrcBlend = gl.ONE;
+			glw.lastDestBlend = gl.ONE_MINUS_SRC_ALPHA;
+			gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+			// GLBatchJob::doQuad does not bind the element array buffer
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glw.indexBuffer);
+
+			// the Spine renderer changes this
+			glw.lastTexture0 = null;
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, null);
+
+			// reload the GLWrap program
+			glw.lastProgram = -1;
+			glw.switchProgram(0);
 		}
 	};
 	
