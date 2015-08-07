@@ -53,8 +53,8 @@
 //				display_str,		// as appears in event sheet - use {0}, {1} for parameters and also <b></b>, <i></i>
 //				description,		// appears in event wizard dialog when selected
 //				script_name);		// corresponding runtime function name
-				
-// example				
+
+// example
 AddNumberParam("Number", "Enter a number to test if positive.");
 AddCondition(0, cf_none, "Is number positive", "My category", "{0} is positive", "Description for my condition!", "MyCondition");
 
@@ -106,7 +106,7 @@ var property_list = [
 	new cr.Property(ept_text,		"Skin Key",			"",		"Skin Key"),
 	new cr.Property(ept_text,		"Anim Key",			"",		"Anim Key")
 	];
-	
+
 // Called by IDE when a new object type is to be created
 function CreateIDEObjectType()
 {
@@ -129,17 +129,17 @@ IDEObjectType.prototype.CreateInstance = function(instance)
 function IDEInstance(instance, type)
 {
 	assert2(this instanceof arguments.callee, "Constructor called as a function");
-	
+
 	// Save the constructor parameters
 	this.instance = instance;
 	this.type = type;
-	
+
 	// Set the default property values from the property table
 	this.properties = {};
-	
+
 	for (var i = 0; i < property_list.length; i++)
 		this.properties[property_list[i].name] = property_list[i].initial_value;
-		
+
 	// Plugin-specific variables
 	// this.myValue = 0...
 }

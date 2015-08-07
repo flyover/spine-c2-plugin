@@ -2721,7 +2721,7 @@ atlas.Data.prototype.importLines = function (lines)
 					site.original_w = site.original_w || site.w;
 					site.original_h = site.original_h || site.h;
 				}
-				
+
 				site = new atlas.Site();
 				site.page = page;
 				data.sites[line] = site;
@@ -2775,31 +2775,31 @@ atlas.Data.prototype.exportLines = function (lines)
 /// spine.js
 
 /**
- * Copyright (c) Flyover Games, LLC 
- *  
- * Isaac Burns isaacburns@gmail.com 
- *  
- * Permission is hereby granted, free of charge, to any person 
- * obtaining a copy of this software and associated 
- * documentation files (the "Software"), to deal in the Software 
- * without restriction, including without limitation the rights 
- * to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to 
- * whom the Software is furnished to do so, subject to the 
- * following conditions: 
- *  
- * The above copyright notice and this permission notice shall 
- * be included in all copies or substantial portions of the 
- * Software. 
- *  
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY 
- * KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
- * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR 
- * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
- * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
+ * Copyright (c) Flyover Games, LLC
+ *
+ * Isaac Burns isaacburns@gmail.com
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software
+ * without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to
+ * whom the Software is furnished to do so, subject to the
+ * following conditions:
+ *
+ * The above copyright notice and this permission notice shall
+ * be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+ * KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 /**
@@ -2808,10 +2808,10 @@ atlas.Data.prototype.exportLines = function (lines)
 goog.provide('spine');
 
 /**
- * @return {boolean} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {boolean=} def 
+ * @return {boolean}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {boolean=} def
  */
 spine.loadBool = function (json, key, def)
 {
@@ -2825,11 +2825,11 @@ spine.loadBool = function (json, key, def)
 }
 
 /**
- * @return {void} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {boolean} value 
- * @param {boolean=} def 
+ * @return {void}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {boolean} value
+ * @param {boolean=} def
  */
 spine.saveBool = function (json, key, value, def)
 {
@@ -2840,10 +2840,10 @@ spine.saveBool = function (json, key, value, def)
 }
 
 /**
- * @return {number} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {number=} def 
+ * @return {number}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {number=} def
  */
 spine.loadFloat = function (json, key, def)
 {
@@ -2857,11 +2857,11 @@ spine.loadFloat = function (json, key, def)
 }
 
 /**
- * @return {void} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {number} value 
- * @param {number=} def 
+ * @return {void}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {number} value
+ * @param {number=} def
  */
 spine.saveFloat = function (json, key, value, def)
 {
@@ -2872,10 +2872,10 @@ spine.saveFloat = function (json, key, value, def)
 }
 
 /**
- * @return {number} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {number=} def 
+ * @return {number}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {number=} def
  */
 spine.loadInt = function (json, key, def)
 {
@@ -2889,11 +2889,11 @@ spine.loadInt = function (json, key, def)
 }
 
 /**
- * @return {void} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {number} value 
- * @param {number=} def 
+ * @return {void}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {number} value
+ * @param {number=} def
  */
 spine.saveInt = function (json, key, value, def)
 {
@@ -2904,10 +2904,10 @@ spine.saveInt = function (json, key, value, def)
 }
 
 /**
- * @return {string} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {string=} def 
+ * @return {string}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {string=} def
  */
 spine.loadString = function (json, key, def)
 {
@@ -2920,11 +2920,11 @@ spine.loadString = function (json, key, def)
 }
 
 /**
- * @return {void} 
- * @param {Object.<string,?>|Array.<?>} json 
- * @param {string|number} key 
- * @param {string} value 
- * @param {string=} def 
+ * @return {void}
+ * @param {Object.<string,?>|Array.<?>} json
+ * @param {string|number} key
+ * @param {string} value
+ * @param {string=} def
  */
 spine.saveString = function (json, key, value, def)
 {
@@ -2951,8 +2951,8 @@ spine.Color.prototype.b = 1;
 spine.Color.prototype.a = 1;
 
 /**
- * @return {spine.Color} 
- * @param {spine.Color} other 
+ * @return {spine.Color}
+ * @param {spine.Color} other
  */
 spine.Color.prototype.copy = function (other)
 {
@@ -2965,8 +2965,8 @@ spine.Color.prototype.copy = function (other)
 }
 
 /**
- * @return {spine.Color} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Color}
+ * @param {Object.<string,?>} json
  */
 spine.Color.prototype.load = function (json)
 {
@@ -2986,7 +2986,7 @@ spine.Color.prototype.load = function (json)
 }
 
 /**
- * @return {string} 
+ * @return {string}
  */
 spine.Color.prototype.toString = function ()
 {
@@ -2996,12 +2996,12 @@ spine.Color.prototype.toString = function ()
 
 // from: http://github.com/arian/cubic-bezier
 /**
- * @return {function(number):number} 
- * @param {number} x1 
- * @param {number} y1 
- * @param {number} x2 
- * @param {number} y2 
- * @param {number=} epsilon 
+ * @return {function(number):number}
+ * @param {number} x1
+ * @param {number} y1
+ * @param {number} x2
+ * @param {number} y2
+ * @param {number=} epsilon
  */
 spine.BezierCurve = function (x1, y1, x2, y2, epsilon)
 {
@@ -3025,16 +3025,16 @@ spine.BezierCurve = function (x1, y1, x2, y2, epsilon)
 	*/
 
 	/*
-	 
+
 	B(t) = P0*(1-t)^3 + 3*P1*(1-t)^2*t + 3*P2*(1-t)*t^2 + P3*t^3
 	B'(t) = P0 - 3*(P0 - P1)*t + 3*(P0 - 2*P1 + P2)*t^2 - (P0 - 3*P1 + 3*P2 - P3)*t^3
-	
+
 	if P0:(0,0) and P3:(1,1)
 	B(t) = 3*P1*(1-t)^2*t + 3*P2*(1-t)*t^2 + t^3
 	B'(t) = 3*P1*t - 3*(2*P1 - P2)*t^2 + (3*P1 - 3*P2 + 1)*t^3
-	
+
 	*/
-	
+
 	function curveX(t)
 	{
 		var t2 = t*t;
@@ -3096,11 +3096,11 @@ spine.BezierCurve = function (x1, y1, x2, y2, epsilon)
 
 // from: spine-libgdx/src/com/esotericsoftware/spine/Animation.java
 /**
- * @return {function(number):number} 
- * @param {number} cx1 
- * @param {number} cy1 
- * @param {number} cx2 
- * @param {number} cy2 
+ * @return {function(number):number}
+ * @param {number} cx1
+ * @param {number} cy1
+ * @param {number} cx2
+ * @param {number} cy2
  */
 spine.StepBezierCurve = function (cx1, cy1, cx2, cy2)
 {
@@ -3166,8 +3166,8 @@ spine.Curve = function ()
 spine.Curve.prototype.evaluate = function (t) { return t; };
 
 /**
- * @return {spine.Curve} 
- * @param {?} json 
+ * @return {spine.Curve}
+ * @param {?} json
  */
 spine.Curve.prototype.load = function (json)
 {
@@ -3195,10 +3195,10 @@ spine.Curve.prototype.load = function (json)
 }
 
 /**
- * @return {number} 
- * @param {number} num 
- * @param {number} min 
- * @param {number} max 
+ * @return {number}
+ * @param {number} num
+ * @param {number} min
+ * @param {number} max
  */
 spine.wrap = function (num, min, max)
 {
@@ -3235,8 +3235,8 @@ spine.tween = function (a, b, t)
 }
 
 /**
- * @return {number} 
- * @param {number} angle 
+ * @return {number}
+ * @param {number} angle
  */
 spine.wrapAngleRadians = function (angle)
 {
@@ -3262,15 +3262,15 @@ spine.tweenAngle = function (a, b, t)
 }
 
 /**
- * @constructor 
- * @param {number=} rad 
+ * @constructor
+ * @param {number=} rad
  */
 spine.Angle = function (rad)
 {
 	this.rad = rad || 0;
 }
 
-Object.defineProperty(spine.Angle.prototype, 'deg', 
+Object.defineProperty(spine.Angle.prototype, 'deg',
 {
 	/** @this {spine.Angle} */
 	get: function () { return this.rad * 180 / Math.PI; },
@@ -3278,13 +3278,13 @@ Object.defineProperty(spine.Angle.prototype, 'deg',
 	set: function (value) { this.rad = value * Math.PI / 180; }
 });
 
-Object.defineProperty(spine.Angle.prototype, 'cos', 
+Object.defineProperty(spine.Angle.prototype, 'cos',
 {
 	/** @this {spine.Angle} */
 	get: function () { return Math.cos(this.rad); }
 });
 
-Object.defineProperty(spine.Angle.prototype, 'sin', 
+Object.defineProperty(spine.Angle.prototype, 'sin',
 {
 	/** @this {spine.Angle} */
 	get: function () { return Math.sin(this.rad); }
@@ -3301,7 +3301,7 @@ spine.Angle.prototype.selfIdentity = function ()
 
 /**
  * @return {spine.Angle}
- * @param {spine.Angle} other 
+ * @param {spine.Angle} other
  */
 spine.Angle.prototype.copy = function (other)
 {
@@ -3310,9 +3310,9 @@ spine.Angle.prototype.copy = function (other)
 }
 
 /**
- * @constructor 
- * @param {number=} x 
- * @param {number=} y 
+ * @constructor
+ * @param {number=} x
+ * @param {number=} y
  */
 spine.Vector = function (x, y)
 {
@@ -3327,7 +3327,7 @@ spine.Vector.prototype.y = 0;
 
 /**
  * @return {spine.Vector}
- * @param {spine.Vector} other 
+ * @param {spine.Vector} other
  */
 spine.Vector.prototype.copy = function (other)
 {
@@ -3337,10 +3337,10 @@ spine.Vector.prototype.copy = function (other)
 }
 
 /**
- * @return {boolean} 
- * @param {spine.Vector} a 
- * @param {spine.Vector} b 
- * @param {number=} epsilon 
+ * @return {boolean}
+ * @param {spine.Vector} a
+ * @param {spine.Vector} b
+ * @param {number=} epsilon
  */
 spine.Vector.equal = function (a, b, epsilon)
 {
@@ -3352,9 +3352,9 @@ spine.Vector.equal = function (a, b, epsilon)
 
 /**
  * @return {spine.Vector}
- * @param {spine.Vector} a 
- * @param {spine.Vector} b 
- * @param {spine.Vector=} out 
+ * @param {spine.Vector} a
+ * @param {spine.Vector} b
+ * @param {spine.Vector=} out
  */
 spine.Vector.add = function (a, b, out)
 {
@@ -3366,8 +3366,8 @@ spine.Vector.add = function (a, b, out)
 
 /**
  * @return {spine.Vector}
- * @param {spine.Vector} other 
- * @param {spine.Vector=} out 
+ * @param {spine.Vector} other
+ * @param {spine.Vector=} out
  */
 spine.Vector.prototype.add = function (other, out)
 {
@@ -3376,7 +3376,7 @@ spine.Vector.prototype.add = function (other, out)
 
 /**
  * @return {spine.Vector}
- * @param {spine.Vector} other 
+ * @param {spine.Vector} other
  */
 spine.Vector.prototype.selfAdd = function (other)
 {
@@ -3388,10 +3388,10 @@ spine.Vector.prototype.selfAdd = function (other)
 
 /**
  * @return {spine.Vector}
- * @param {spine.Vector} a 
- * @param {spine.Vector} b 
- * @param {number} pct 
- * @param {spine.Vector=} out 
+ * @param {spine.Vector} a
+ * @param {spine.Vector} b
+ * @param {number} pct
+ * @param {spine.Vector=} out
  */
 spine.Vector.tween = function (a, b, pct, out)
 {
@@ -3403,9 +3403,9 @@ spine.Vector.tween = function (a, b, pct, out)
 
 /**
  * @return {spine.Vector}
- * @param {spine.Vector} other 
- * @param {number} pct 
- * @param {spine.Vector=} out 
+ * @param {spine.Vector} other
+ * @param {number} pct
+ * @param {spine.Vector=} out
  */
 spine.Vector.prototype.tween = function (other, pct, out)
 {
@@ -3414,8 +3414,8 @@ spine.Vector.prototype.tween = function (other, pct, out)
 
 /**
  * @return {spine.Vector}
- * @param {spine.Vector} other 
- * @param {number} pct 
+ * @param {spine.Vector} other
+ * @param {number} pct
  */
 spine.Vector.prototype.selfTween = function (other, pct)
 {
@@ -3423,8 +3423,8 @@ spine.Vector.prototype.selfTween = function (other, pct)
 }
 
 /**
- * @constructor 
- * @extends {spine.Vector} 
+ * @constructor
+ * @extends {spine.Vector}
  */
 spine.Position = function ()
 {
@@ -3434,8 +3434,8 @@ spine.Position = function ()
 goog.inherits(spine.Position, spine.Vector);
 
 /**
- * @constructor 
- * @extends {spine.Angle} 
+ * @constructor
+ * @extends {spine.Angle}
  */
 spine.Rotation = function ()
 {
@@ -3445,8 +3445,8 @@ spine.Rotation = function ()
 goog.inherits(spine.Rotation, spine.Angle);
 
 /**
- * @constructor 
- * @extends {spine.Vector} 
+ * @constructor
+ * @extends {spine.Vector}
  */
 spine.Scale = function ()
 {
@@ -3466,8 +3466,8 @@ spine.Scale.prototype.selfIdentity = function ()
 }
 
 /**
- * @constructor 
- * @extends {spine.Vector} 
+ * @constructor
+ * @extends {spine.Vector}
  */
 spine.Flip = function ()
 {
@@ -3477,7 +3477,7 @@ spine.Flip = function ()
 goog.inherits(spine.Flip, spine.Vector);
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Space = function ()
 {
@@ -3498,8 +3498,8 @@ spine.Space.prototype.scale;
 spine.Space.prototype.flip;
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} other 
+ * @return {spine.Space}
+ * @param {spine.Space} other
  */
 spine.Space.prototype.copy = function (other)
 {
@@ -3512,8 +3512,8 @@ spine.Space.prototype.copy = function (other)
 }
 
 /**
- * @return {spine.Space} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Space}
+ * @param {Object.<string,?>} json
  */
 spine.Space.prototype.load = function (json)
 {
@@ -3529,10 +3529,10 @@ spine.Space.prototype.load = function (json)
 }
 
 /**
- * @return {boolean} 
- * @param {spine.Space} a 
- * @param {spine.Space} b 
- * @param {number=} epsilon 
+ * @return {boolean}
+ * @param {spine.Space} a
+ * @param {spine.Space} b
+ * @param {number=} epsilon
  */
 spine.Space.equal = function (a, b, epsilon)
 {
@@ -3548,8 +3548,8 @@ spine.Space.equal = function (a, b, epsilon)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space=} out 
+ * @return {spine.Space}
+ * @param {spine.Space=} out
  */
 spine.Space.identity = function (out)
 {
@@ -3565,10 +3565,10 @@ spine.Space.identity = function (out)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} space 
- * @param {number} x 
- * @param {number} y 
+ * @return {spine.Space}
+ * @param {spine.Space} space
+ * @param {number} x
+ * @param {number} y
  */
 spine.Space.translate = function (space, x, y)
 {
@@ -3585,9 +3585,9 @@ spine.Space.translate = function (space, x, y)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} space 
- * @param {number} rad 
+ * @return {spine.Space}
+ * @param {spine.Space} space
+ * @param {number} rad
  */
 spine.Space.rotate = function (space, rad)
 {
@@ -3597,10 +3597,10 @@ spine.Space.rotate = function (space, rad)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} space 
- * @param {number} x 
- * @param {number} y 
+ * @return {spine.Space}
+ * @param {spine.Space} space
+ * @param {number} x
+ * @param {number} y
  */
 spine.Space.scale = function (space, x, y)
 {
@@ -3610,10 +3610,10 @@ spine.Space.scale = function (space, x, y)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} space 
- * @param {boolean} x 
- * @param {boolean} y 
+ * @return {spine.Space}
+ * @param {spine.Space} space
+ * @param {boolean} x
+ * @param {boolean} y
  */
 spine.Space.flip = function (space, x, y)
 {
@@ -3623,9 +3623,9 @@ spine.Space.flip = function (space, x, y)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} space 
- * @param {spine.Space=} out 
+ * @return {spine.Space}
+ * @param {spine.Space} space
+ * @param {spine.Space=} out
  */
 spine.Space.invert = function (space, out)
 {
@@ -3660,10 +3660,10 @@ spine.Space.invert = function (space, out)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} a 
- * @param {spine.Space} b 
- * @param {spine.Space=} out 
+ * @return {spine.Space}
+ * @param {spine.Space} a
+ * @param {spine.Space} b
+ * @param {spine.Space=} out
  */
 spine.Space.combine = function (a, b, out)
 {
@@ -3691,10 +3691,10 @@ spine.Space.combine = function (a, b, out)
 }
 
 /**
- * @return {spine.Space} 
- * @param {spine.Space} ab 
- * @param {spine.Space} a 
- * @param {spine.Space=} out 
+ * @return {spine.Space}
+ * @param {spine.Space} ab
+ * @param {spine.Space} a
+ * @param {spine.Space=} out
  */
 spine.Space.extract = function (ab, a, out)
 {
@@ -3722,10 +3722,10 @@ spine.Space.extract = function (ab, a, out)
 }
 
 /**
- * @return {spine.Vector} 
- * @param {spine.Space} space 
- * @param {spine.Vector} v 
- * @param {spine.Vector=} out 
+ * @return {spine.Vector}
+ * @param {spine.Space} space
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
  */
 spine.Space.transform = function (space, v, out)
 {
@@ -3743,10 +3743,10 @@ spine.Space.transform = function (space, v, out)
 }
 
 /**
- * @return {spine.Vector} 
- * @param {spine.Space} space 
- * @param {spine.Vector} v 
- * @param {spine.Vector=} out 
+ * @return {spine.Vector}
+ * @param {spine.Space} space
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
  */
 spine.Space.untransform = function (space, v, out)
 {
@@ -3764,7 +3764,7 @@ spine.Space.untransform = function (space, v, out)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Bone = function ()
 {
@@ -3787,8 +3787,8 @@ spine.Bone.prototype.inherit_rotation = true;
 spine.Bone.prototype.inherit_scale = true;
 
 /**
- * @return {spine.Bone} 
- * @param {spine.Bone} other 
+ * @return {spine.Bone}
+ * @param {spine.Bone} other
  */
 spine.Bone.prototype.copy = function (other)
 {
@@ -3803,8 +3803,8 @@ spine.Bone.prototype.copy = function (other)
 }
 
 /**
- * @return {spine.Bone} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Bone}
+ * @param {Object.<string,?>} json
  */
 spine.Bone.prototype.load = function (json)
 {
@@ -3820,8 +3820,8 @@ spine.Bone.prototype.load = function (json)
 
 /**
  * @return {spine.Bone}
- * @param {spine.Bone} bone 
- * @param {Object.<string,spine.Bone>} bones 
+ * @param {spine.Bone} bone
+ * @param {Object.<string,spine.Bone>} bones
  */
 spine.Bone.flatten = function (bone, bones)
 {
@@ -3877,7 +3877,7 @@ spine.Bone.flatten = function (bone, bones)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Ikc = function ()
 {
@@ -3897,8 +3897,8 @@ spine.Ikc.prototype.mix = 1;
 spine.Ikc.prototype.bend_positive = true;
 
 /**
- * @return {spine.Ikc} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Ikc}
+ * @param {Object.<string,?>} json
  */
 spine.Ikc.prototype.load = function (json)
 {
@@ -3912,7 +3912,7 @@ spine.Ikc.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Slot = function ()
 {
@@ -3930,8 +3930,8 @@ spine.Slot.prototype.attachment_key = "";
 spine.Slot.prototype.blend = "normal";
 
 /**
- * @return {spine.Slot} 
- * @param {spine.Slot} other 
+ * @return {spine.Slot}
+ * @param {spine.Slot} other
  */
 spine.Slot.prototype.copy = function (other)
 {
@@ -3944,8 +3944,8 @@ spine.Slot.prototype.copy = function (other)
 }
 
 /**
- * @return {spine.Slot} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Slot}
+ * @param {Object.<string,?>} json
  */
 spine.Slot.prototype.load = function (json)
 {
@@ -3958,8 +3958,8 @@ spine.Slot.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @param {string} type 
+ * @constructor
+ * @param {string} type
  */
 spine.Attachment = function (type)
 {
@@ -3974,8 +3974,8 @@ spine.Attachment.prototype.name = "";
 spine.Attachment.prototype.path = "";
 
 /**
- * @return {spine.Attachment} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
  */
 spine.Attachment.prototype.load = function (json)
 {
@@ -3991,8 +3991,8 @@ spine.Attachment.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Attachment} 
+ * @constructor
+ * @extends {spine.Attachment}
  */
 spine.RegionAttachment = function ()
 {
@@ -4013,8 +4013,8 @@ spine.RegionAttachment.prototype.width = 0;
 spine.RegionAttachment.prototype.height = 0;
 
 /**
- * @return {spine.Attachment} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
  */
 spine.RegionAttachment.prototype.load = function (json)
 {
@@ -4029,8 +4029,8 @@ spine.RegionAttachment.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Attachment} 
+ * @constructor
+ * @extends {spine.Attachment}
  */
 spine.BoundingBoxAttachment = function ()
 {
@@ -4046,8 +4046,8 @@ goog.inherits(spine.BoundingBoxAttachment, spine.Attachment);
 spine.BoundingBoxAttachment.prototype.vertices;
 
 /**
- * @return {spine.Attachment} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
  */
 spine.BoundingBoxAttachment.prototype.load = function (json)
 {
@@ -4060,8 +4060,8 @@ spine.BoundingBoxAttachment.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Attachment} 
+ * @constructor
+ * @extends {spine.Attachment}
  */
 spine.MeshAttachment = function ()
 {
@@ -4106,8 +4106,8 @@ spine.MeshAttachment.prototype.uvs;
 spine.MeshAttachment.prototype.hull = 0;
 
 /**
- * @return {spine.Attachment} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
  */
 spine.MeshAttachment.prototype.load = function (json)
 {
@@ -4124,8 +4124,8 @@ spine.MeshAttachment.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Attachment} 
+ * @constructor
+ * @extends {spine.Attachment}
  */
 spine.SkinnedMeshAttachment = function ()
 {
@@ -4170,8 +4170,8 @@ spine.SkinnedMeshAttachment.prototype.uvs;
 spine.SkinnedMeshAttachment.prototype.hull = 0;
 
 /**
- * @return {spine.Attachment} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
  */
 spine.SkinnedMeshAttachment.prototype.load = function (json)
 {
@@ -4188,7 +4188,7 @@ spine.SkinnedMeshAttachment.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.SkinSlot = function ()
 {
@@ -4200,8 +4200,8 @@ spine.SkinSlot = function ()
 spine.SkinSlot.prototype.attachments;
 
 /**
- * @return {spine.SkinSlot} 
- * @param {Object.<string,?>} json 
+ * @return {spine.SkinSlot}
+ * @param {Object.<string,?>} json
  */
 spine.SkinSlot.prototype.load = function (json)
 {
@@ -4230,7 +4230,7 @@ spine.SkinSlot.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Skin = function ()
 {
@@ -4242,8 +4242,8 @@ spine.Skin = function ()
 spine.Skin.prototype.slots;
 
 /**
- * @return {spine.Skin} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Skin}
+ * @param {Object.<string,?>} json
  */
 spine.Skin.prototype.load = function (json)
 {
@@ -4257,7 +4257,7 @@ spine.Skin.prototype.load = function (json)
 
 /**
  * @return {void}
- * @param {function(string, spine.SkinSlot, string, spine.Attachment):void} callback 
+ * @param {function(string, spine.SkinSlot, string, spine.Attachment):void} callback
  */
 spine.Skin.prototype.iterateAttachments = function (callback)
 {
@@ -4291,7 +4291,7 @@ spine.Event.prototype.string_value = "";
 
 /**
  * @return {spine.Event}
- * @param {spine.Event} other 
+ * @param {spine.Event} other
  */
 spine.Event.prototype.copy = function (other)
 {
@@ -4304,7 +4304,7 @@ spine.Event.prototype.copy = function (other)
 
 /**
  * @return {spine.Event}
- * @param {Object.<string,?>} json 
+ * @param {Object.<string,?>} json
  */
 spine.Event.prototype.load = function (json)
 {
@@ -4329,7 +4329,7 @@ spine.Event.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Keyframe = function ()
 {
@@ -4339,7 +4339,7 @@ spine.Keyframe = function ()
 spine.Keyframe.prototype.time = 0;
 
 /**
- * @return {spine.Keyframe} 
+ * @return {spine.Keyframe}
  */
 spine.Keyframe.prototype.drop = function ()
 {
@@ -4348,8 +4348,8 @@ spine.Keyframe.prototype.drop = function ()
 }
 
 /**
- * @return {spine.Keyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Keyframe}
+ * @param {Object.<string,?>} json
  */
 spine.Keyframe.prototype.load = function (json)
 {
@@ -4358,8 +4358,8 @@ spine.Keyframe.prototype.load = function (json)
 }
 
 /**
- * @return {spine.Keyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Keyframe}
+ * @param {Object.<string,?>} json
  */
 spine.Keyframe.prototype.save = function (json)
 {
@@ -4368,9 +4368,9 @@ spine.Keyframe.prototype.save = function (json)
 }
 
 /**
- * @return {number} 
- * @param {Array.<spine.Keyframe>} array 
- * @param {number} time 
+ * @return {number}
+ * @param {Array.<spine.Keyframe>} array
+ * @param {number} time
  */
 spine.Keyframe.find = function (array, time)
 {
@@ -4392,9 +4392,9 @@ spine.Keyframe.find = function (array, time)
 }
 
 /**
- * @return {number} 
- * @param {spine.Keyframe} a 
- * @param {spine.Keyframe} b 
+ * @return {number}
+ * @param {spine.Keyframe} a
+ * @param {spine.Keyframe} b
  */
 spine.Keyframe.compare = function (a, b)
 {
@@ -4402,8 +4402,8 @@ spine.Keyframe.compare = function (a, b)
 }
 
 /**
- * @constructor 
- * @extends {spine.Keyframe} 
+ * @constructor
+ * @extends {spine.Keyframe}
  */
 spine.BoneKeyframe = function ()
 {
@@ -4417,8 +4417,8 @@ goog.inherits(spine.BoneKeyframe, spine.Keyframe);
 spine.BoneKeyframe.prototype.curve;
 
 /**
- * @return {spine.BoneKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.BoneKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.BoneKeyframe.prototype.load = function (json)
 {
@@ -4428,8 +4428,8 @@ spine.BoneKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.BoneKeyframe} 
+ * @constructor
+ * @extends {spine.BoneKeyframe}
  */
 spine.TranslateKeyframe = function ()
 {
@@ -4443,8 +4443,8 @@ goog.inherits(spine.TranslateKeyframe, spine.BoneKeyframe);
 spine.TranslateKeyframe.prototype.position;
 
 /**
- * @return {spine.TranslateKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.TranslateKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.TranslateKeyframe.prototype.load = function (json)
 {
@@ -4455,8 +4455,8 @@ spine.TranslateKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.BoneKeyframe} 
+ * @constructor
+ * @extends {spine.BoneKeyframe}
  */
 spine.RotateKeyframe = function ()
 {
@@ -4470,8 +4470,8 @@ goog.inherits(spine.RotateKeyframe, spine.BoneKeyframe);
 spine.RotateKeyframe.prototype.rotation;
 
 /**
- * @return {spine.RotateKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.RotateKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.RotateKeyframe.prototype.load = function (json)
 {
@@ -4481,8 +4481,8 @@ spine.RotateKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.BoneKeyframe} 
+ * @constructor
+ * @extends {spine.BoneKeyframe}
  */
 spine.ScaleKeyframe = function ()
 {
@@ -4496,8 +4496,8 @@ goog.inherits(spine.ScaleKeyframe, spine.BoneKeyframe);
 spine.ScaleKeyframe.prototype.scale;
 
 /**
- * @return {spine.ScaleKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.ScaleKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.ScaleKeyframe.prototype.load = function (json)
 {
@@ -4508,8 +4508,8 @@ spine.ScaleKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.BoneKeyframe} 
+ * @constructor
+ * @extends {spine.BoneKeyframe}
  */
 spine.FlipXKeyframe = function ()
 {
@@ -4522,8 +4522,8 @@ goog.inherits(spine.FlipXKeyframe, spine.BoneKeyframe);
 spine.FlipXKeyframe.prototype.flip_x = false;
 
 /**
- * @return {spine.FlipXKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.FlipXKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.FlipXKeyframe.prototype.load = function (json)
 {
@@ -4533,8 +4533,8 @@ spine.FlipXKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.BoneKeyframe} 
+ * @constructor
+ * @extends {spine.BoneKeyframe}
  */
 spine.FlipYKeyframe = function ()
 {
@@ -4547,8 +4547,8 @@ goog.inherits(spine.FlipYKeyframe, spine.BoneKeyframe);
 spine.FlipYKeyframe.prototype.flip_y = false;
 
 /**
- * @return {spine.FlipYKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.FlipYKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.FlipYKeyframe.prototype.load = function (json)
 {
@@ -4558,7 +4558,7 @@ spine.FlipYKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.AnimBone = function ()
 {
@@ -4580,8 +4580,8 @@ spine.AnimBone.prototype.flip_x_keyframes = null;
 spine.AnimBone.prototype.flip_y_keyframes = null;
 
 /**
- * @return {spine.AnimBone} 
- * @param {Object.<string,?>} json 
+ * @return {spine.AnimBone}
+ * @param {Object.<string,?>} json
  */
 spine.AnimBone.prototype.load = function (json)
 {
@@ -4663,8 +4663,8 @@ spine.AnimBone.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Keyframe} 
+ * @constructor
+ * @extends {spine.Keyframe}
  */
 spine.SlotKeyframe = function ()
 {
@@ -4674,8 +4674,8 @@ spine.SlotKeyframe = function ()
 goog.inherits(spine.SlotKeyframe, spine.Keyframe);
 
 /**
- * @return {spine.SlotKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.SlotKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.SlotKeyframe.prototype.load = function (json)
 {
@@ -4684,8 +4684,8 @@ spine.SlotKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.SlotKeyframe} 
+ * @constructor
+ * @extends {spine.SlotKeyframe}
  */
 spine.ColorKeyframe = function ()
 {
@@ -4703,8 +4703,8 @@ spine.ColorKeyframe.prototype.color;
 spine.ColorKeyframe.prototype.curve;
 
 /**
- * @return {spine.ColorKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.ColorKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.ColorKeyframe.prototype.load = function (json)
 {
@@ -4715,8 +4715,8 @@ spine.ColorKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.SlotKeyframe} 
+ * @constructor
+ * @extends {spine.SlotKeyframe}
  */
 spine.AttachmentKeyframe = function ()
 {
@@ -4730,8 +4730,8 @@ goog.inherits(spine.AttachmentKeyframe, spine.SlotKeyframe);
 spine.AttachmentKeyframe.prototype.name = "";
 
 /**
- * @return {spine.AttachmentKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.AttachmentKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.AttachmentKeyframe.prototype.load = function (json)
 {
@@ -4741,7 +4741,7 @@ spine.AttachmentKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.AnimSlot = function ()
 {
@@ -4757,8 +4757,8 @@ spine.AnimSlot.prototype.color_keyframes = null;
 spine.AnimSlot.prototype.attachment_keyframes = null;
 
 /**
- * @return {spine.AnimSlot} 
- * @param {Object.<string,?>} json 
+ * @return {spine.AnimSlot}
+ * @param {Object.<string,?>} json
  */
 spine.AnimSlot.prototype.load = function (json)
 {
@@ -4805,8 +4805,8 @@ spine.AnimSlot.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Keyframe} 
+ * @constructor
+ * @extends {spine.Keyframe}
  */
 spine.EventKeyframe = function ()
 {
@@ -4825,8 +4825,8 @@ spine.EventKeyframe.prototype.float_value = 0;
 spine.EventKeyframe.prototype.string_value = "";
 
 /**
- * @return {spine.EventKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.EventKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.EventKeyframe.prototype.load = function (json)
 {
@@ -4864,7 +4864,7 @@ spine.SlotOffset.prototype.offset = 0;
 
 /**
  * @return {spine.SlotOffset}
- * @param {Object.<string,?>} json 
+ * @param {Object.<string,?>} json
  */
 spine.SlotOffset.prototype.load = function (json)
 {
@@ -4874,8 +4874,8 @@ spine.SlotOffset.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Keyframe} 
+ * @constructor
+ * @extends {spine.Keyframe}
  */
 spine.OrderKeyframe = function ()
 {
@@ -4890,8 +4890,8 @@ goog.inherits(spine.OrderKeyframe, spine.Keyframe);
 spine.OrderKeyframe.slot_offsets;
 
 /**
- * @return {spine.OrderKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.OrderKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.OrderKeyframe.prototype.load = function (json)
 {
@@ -4915,8 +4915,8 @@ spine.OrderKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
- * @extends {spine.Keyframe} 
+ * @constructor
+ * @extends {spine.Keyframe}
  */
 spine.IkcKeyframe = function ()
 {
@@ -4937,8 +4937,8 @@ spine.IkcKeyframe.prototype.mix = 1;
 spine.IkcKeyframe.prototype.bend_positive = true;
 
 /**
- * @return {spine.IkcKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.IkcKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.IkcKeyframe.prototype.load = function (json)
 {
@@ -4950,7 +4950,7 @@ spine.IkcKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.AnimIkc = function ()
 {
@@ -4964,8 +4964,8 @@ spine.AnimIkc.prototype.max_time = 0;
 spine.AnimIkc.prototype.ikc_keyframes = null;
 
 /**
- * @return {spine.AnimIkc} 
- * @param {Object.<string,?>} json 
+ * @return {spine.AnimIkc}
+ * @param {Object.<string,?>} json
  */
 spine.AnimIkc.prototype.load = function (json)
 {
@@ -4988,7 +4988,7 @@ spine.AnimIkc.prototype.load = function (json)
 
 /**
  * @constructor
- * @extends {spine.Keyframe} 
+ * @extends {spine.Keyframe}
  */
 spine.FfdKeyframe = function ()
 {
@@ -5010,8 +5010,8 @@ spine.FfdKeyframe.prototype.offset = 0;
 spine.FfdKeyframe.prototype.vertices;
 
 /**
- * @return {spine.FfdKeyframe} 
- * @param {Object.<string,?>} json 
+ * @return {spine.FfdKeyframe}
+ * @param {Object.<string,?>} json
  */
 spine.FfdKeyframe.prototype.load = function (json)
 {
@@ -5023,7 +5023,7 @@ spine.FfdKeyframe.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.FfdAttachment = function ()
 {
@@ -5037,8 +5037,8 @@ spine.FfdAttachment.prototype.max_time = 0;
 spine.FfdAttachment.prototype.ffd_keyframes = null;
 
 /**
- * @return {spine.FfdAttachment} 
- * @param {Object.<string,?>} json 
+ * @return {spine.FfdAttachment}
+ * @param {Object.<string,?>} json
  */
 spine.FfdAttachment.prototype.load = function (json)
 {
@@ -5062,7 +5062,7 @@ spine.FfdAttachment.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.FfdSlot = function ()
 {
@@ -5074,8 +5074,8 @@ spine.FfdSlot = function ()
 spine.FfdSlot.prototype.ffd_attachments;
 
 /**
- * @return {spine.FfdSlot} 
- * @param {Object.<string,?>} json 
+ * @return {spine.FfdSlot}
+ * @param {Object.<string,?>} json
  */
 spine.FfdSlot.prototype.load = function (json)
 {
@@ -5108,7 +5108,7 @@ spine.FfdSlot.prototype.iterateAttachments = function (callback)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.AnimFfd = function ()
 {
@@ -5124,8 +5124,8 @@ spine.AnimFfd.prototype.max_time = 0;
 spine.AnimFfd.prototype.ffd_slots;
 
 /**
- * @return {spine.AnimFfd} 
- * @param {Object.<string,?>} json 
+ * @return {spine.AnimFfd}
+ * @param {Object.<string,?>} json
  */
 spine.AnimFfd.prototype.load = function (json)
 {
@@ -5204,8 +5204,8 @@ spine.Animation.prototype.max_time = 0;
 spine.Animation.prototype.length = 0;
 
 /**
- * @return {spine.Animation} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Animation}
+ * @param {Object.<string,?>} json
  */
 spine.Animation.prototype.load = function (json)
 {
@@ -5296,7 +5296,7 @@ spine.Animation.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Skeleton = function ()
 {
@@ -5314,8 +5314,8 @@ spine.Skeleton.prototype.height = 0;
 spine.Skeleton.prototype.images = "";
 
 /**
- * @return {spine.Skeleton} 
- * @param {Object.<string,?>} json 
+ * @return {spine.Skeleton}
+ * @param {Object.<string,?>} json
  */
 spine.Skeleton.prototype.load = function (json)
 {
@@ -5331,7 +5331,7 @@ spine.Skeleton.prototype.load = function (json)
 }
 
 /**
- * @constructor 
+ * @constructor
  */
 spine.Data = function ()
 {
@@ -5382,8 +5382,8 @@ spine.Data.prototype.anims;
 spine.Data.prototype.anim_keys;
 
 /**
- * @return {spine.Data} 
- * @param {?} json 
+ * @return {spine.Data}
+ * @param {?} json
  */
 spine.Data.prototype.load = function (json)
 {
@@ -5474,8 +5474,8 @@ spine.Data.prototype.load = function (json)
 }
 
 /**
- * @return {spine.Data} 
- * @param {?} json 
+ * @return {spine.Data}
+ * @param {?} json
  */
 spine.Data.prototype.loadSkeleton = function (json)
 {
@@ -5485,8 +5485,8 @@ spine.Data.prototype.loadSkeleton = function (json)
 }
 
 /**
- * @return {spine.Data} 
- * @param {?} json 
+ * @return {spine.Data}
+ * @param {?} json
  */
 spine.Data.prototype.loadEvent = function (name, json)
 {
@@ -5497,8 +5497,8 @@ spine.Data.prototype.loadEvent = function (name, json)
 }
 
 /**
- * @return {spine.Data} 
- * @param {?} json 
+ * @return {spine.Data}
+ * @param {?} json
  */
 spine.Data.prototype.loadAnimation = function (name, json)
 {
@@ -5611,8 +5611,8 @@ spine.Data.prototype.iterateAnims = function (callback)
 }
 
 /**
- * @constructor 
- * @param {spine.Data=} data 
+ * @constructor
+ * @param {spine.Data=} data
  */
 spine.Pose = function (data)
 {
@@ -5695,7 +5695,7 @@ spine.Pose.prototype.getSkin = function ()
 }
 
 /**
- * @return {void} 
+ * @return {void}
  * @param {string} skin_key
  */
 spine.Pose.prototype.setSkin = function (skin_key)
@@ -5758,7 +5758,7 @@ spine.Pose.prototype.getAnim = function ()
 }
 
 /**
- * @return {void} 
+ * @return {void}
  * @param {string} anim_key
  */
 spine.Pose.prototype.setAnim = function (anim_key)
@@ -5788,8 +5788,8 @@ spine.Pose.prototype.getTime = function ()
 }
 
 /**
- * @return {void} 
- * @param {number} time 
+ * @return {void}
+ * @param {number} time
  */
 spine.Pose.prototype.setTime = function (time)
 {
@@ -5835,10 +5835,10 @@ spine.Pose.prototype.strike = function ()
 
 	var prev_time = pose.time;
 	var elapsed_time = pose.elapsed_time;
-	
+
 	pose.time = pose.time + pose.elapsed_time; // accumulate elapsed time
 	pose.elapsed_time = 0; // reset elapsed time for next strike
-	
+
 	var wrapped_min = false;
 	var wrapped_max = false;
 	if (anim)
@@ -5847,7 +5847,7 @@ spine.Pose.prototype.strike = function ()
 		wrapped_max = (elapsed_time > 0) && (pose.time >= anim.max_time);
 		pose.time = spine.wrap(pose.time, anim.min_time, anim.max_time);
 	}
-	
+
 	var time = pose.time;
 
 	data.bone_keys.forEach(function (bone_key)
@@ -6128,7 +6128,7 @@ spine.Pose.prototype.strike = function ()
 			});
 		}
 	}
-	
+
 	pose.events.length = 0;
 
 	if (anim)
@@ -6170,7 +6170,7 @@ spine.Pose.prototype.strike = function ()
 		if (keyframe_index !== -1)
 		{
 			var event_keyframe = anim.event_keyframes[keyframe_index];
-			if (((elapsed_time < 0) && ((time <= event_keyframe.time) && (event_keyframe.time <= prev_time))) || 
+			if (((elapsed_time < 0) && ((time <= event_keyframe.time) && (event_keyframe.time <= prev_time))) ||
 				((elapsed_time > 0) && ((prev_time <= event_keyframe.time) && (event_keyframe.time <= time))))
 			{
 				add_event(event_keyframe);
@@ -6306,7 +6306,7 @@ function loadText (url, callback)
 			{
 				callback(req.response, null);
 			}
-		}, 
+		},
 		false);
 		req.send();
 	}
@@ -6325,7 +6325,7 @@ function loadImage (url, callback)
 	image.addEventListener('abort', function (event) { callback("abort", null); }, false);
 	image.addEventListener('load', function (event) { callback(null, image); }, false);
 	image.src = url;
-	return image;	
+	return image;
 }
 
 /// render-ctx2d.js
@@ -6651,7 +6651,7 @@ renderCtx2D.prototype.drawDebugPose = function (spine_pose, atlas_data)
 {
 	var render = this;
 	var ctx = render.ctx;
-	
+
 	render.updatePose(spine_pose, atlas_data);
 
 	spine_pose.iterateAttachments(function (slot_key, slot, skin_slot, attachment_key, attachment)
@@ -6905,9 +6905,9 @@ function ctxDrawImageMesh (ctx, triangles, positions, texcoords, image, site, pa
 		ctx.closePath();
 		ctx.clip();
 		x1 -= x0; y1 -= y0;
-		x2 -= x0; y2 -= y0; 
+		x2 -= x0; y2 -= y0;
 		u1 -= u0; v1 -= v0;
-		u2 -= u0; v2 -= v0; 
+		u2 -= u0; v2 -= v0;
 		var id = 1 / (u1*v2 - u2*v1);
 		var a = id * (v2*x1 - v1*x2);
 		var b = id * (v2*y1 - v1*y2);
@@ -6931,7 +6931,7 @@ function ctxDrawIkConstraints (ctx, data, bones)
 		{
 		case 1:
 			var bone = bones[ikc.bone_keys[0]];
-			
+
 			ctx.beginPath();
 			ctx.moveTo(target.world_space.position.x, target.world_space.position.y);
 			ctx.lineTo(bone.world_space.position.x, bone.world_space.position.y);
@@ -6942,7 +6942,7 @@ function ctxDrawIkConstraints (ctx, data, bones)
 			ctxApplySpace(ctx, target.world_space);
 			ctxDrawCircle(ctx, 'yellow', 1.5);
 			ctx.restore();
-			
+
 			ctx.save();
 			ctxApplySpace(ctx, bone.world_space);
 			ctxDrawCircle(ctx, 'yellow', 0.5);
@@ -6951,24 +6951,24 @@ function ctxDrawIkConstraints (ctx, data, bones)
 		case 2:
 			var parent = bones[ikc.bone_keys[0]];
 			var child = bones[ikc.bone_keys[1]];
-			
+
 			ctx.beginPath();
 			ctx.moveTo(target.world_space.position.x, target.world_space.position.y);
 			ctx.lineTo(child.world_space.position.x, child.world_space.position.y);
 			ctx.lineTo(parent.world_space.position.x, parent.world_space.position.y);
 			ctx.strokeStyle = 'yellow';
 			ctx.stroke();
-			
+
 			ctx.save();
 			ctxApplySpace(ctx, target.world_space);
 			ctxDrawCircle(ctx, 'yellow', 1.5);
 			ctx.restore();
-			
+
 			ctx.save();
 			ctxApplySpace(ctx, child.world_space);
 			ctxDrawCircle(ctx, 'yellow', 0.75);
 			ctx.restore();
-			
+
 			ctx.save();
 			ctxApplySpace(ctx, parent.world_space);
 			ctxDrawCircle(ctx, 'yellow', 0.5);
@@ -6998,7 +6998,7 @@ renderWebGL = function (gl)
 	render.gl_modelview = mat3x3Identity(new Float32Array(9));
 	render.gl_tex_matrix = mat3x3Identity(new Float32Array(9));
 	render.gl_color = vec4Identity(new Float32Array(4));
-	var gl_mesh_shader_vs_src = 
+	var gl_mesh_shader_vs_src =
 	[
 		"precision mediump int;",
 		"precision mediump float;",
@@ -7013,7 +7013,7 @@ renderWebGL = function (gl)
 		" gl_Position = vec4(uProjection * uModelview * vec3(aVertexPosition, 1.0), 1.0);",
 		"}"
 	];
-	var gl_ffd_mesh_shader_vs_src = 
+	var gl_ffd_mesh_shader_vs_src =
 	[
 		"precision mediump int;",
 		"precision mediump float;",
@@ -7031,7 +7031,7 @@ renderWebGL = function (gl)
 		" gl_Position = vec4(uProjection * uModelview * vec3(aVertexPosition + mix(aVertexMorph0Position, aVertexMorph1Position, uMorphWeight), 1.0), 1.0);",
 		"}"
 	];
-	var gl_mesh_shader_fs_src = 
+	var gl_mesh_shader_fs_src =
 	[
 		"precision mediump int;",
 		"precision mediump float;",
@@ -7060,7 +7060,7 @@ renderWebGL = function (gl)
 		}
 		return array;
 	}
-	var gl_skin_shader_vs_src = 
+	var gl_skin_shader_vs_src =
 	[
 		"precision mediump int;",
 		"precision mediump float;",
@@ -7079,7 +7079,7 @@ renderWebGL = function (gl)
 		" gl_Position = vec4(uProjection * blendPosition, 1.0);",
 		"}"
 	];
-	var gl_ffd_skin_shader_vs_src = 
+	var gl_ffd_skin_shader_vs_src =
 	[
 		"precision mediump int;",
 		"precision mediump float;",
@@ -7101,7 +7101,7 @@ renderWebGL = function (gl)
 		" gl_Position = vec4(uProjection * blendPosition, 1.0);",
 		"}"
 	];
-	var gl_skin_shader_fs_src = 
+	var gl_skin_shader_fs_src =
 	[
 		"precision mediump int;",
 		"precision mediump float;",
@@ -7371,7 +7371,7 @@ renderWebGL.prototype.loadPose = function (spine_pose, atlas_data, images)
 								}
 								var vertex_offset = vertex_index * 2;
 								vertex[vertex_offset++] = vertex_x;
-								vertex[vertex_offset++] = vertex_y;								
+								vertex[vertex_offset++] = vertex_y;
 							}
 							anim_ffd_keyframe.gl_vertex = glMakeVertex(gl, vertex, 2, gl.ARRAY_BUFFER, gl.STATIC_DRAW);
 						});
@@ -7587,13 +7587,13 @@ renderWebGL.prototype.drawPose = function (spine_pose, atlas_data)
 				var gl_vertex = attachment_info.gl_vertex;
 
 				gl.useProgram(gl_shader.program);
-				
+
 				gl.uniformMatrix3fv(gl_shader.uniforms['uProjection'], false, gl_projection);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uModelview'], false, gl_modelview);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uTexMatrix'], false, gl_tex_matrix);
 				gl.uniform4fv(gl_shader.uniforms['uColor'], gl_color);
 				gl.uniform1f(gl_shader.uniforms['uMorphWeight'], pct);
-				
+
 				gl.activeTexture(gl.TEXTURE0);
 				gl.bindTexture(gl.TEXTURE_2D, gl_texture);
 				gl.uniform1i(gl_shader.uniforms['uSampler'], 0);
@@ -7619,17 +7619,17 @@ renderWebGL.prototype.drawPose = function (spine_pose, atlas_data)
 			else
 			{
 				// no ffd
-			
+
 				var gl_shader = render.gl_mesh_shader;
 				var gl_vertex = attachment_info.gl_vertex;
 
 				gl.useProgram(gl_shader.program);
-				
+
 				gl.uniformMatrix3fv(gl_shader.uniforms['uProjection'], false, gl_projection);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uModelview'], false, gl_modelview);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uTexMatrix'], false, gl_tex_matrix);
 				gl.uniform4fv(gl_shader.uniforms['uColor'], gl_color);
-				
+
 				gl.activeTexture(gl.TEXTURE0);
 				gl.bindTexture(gl.TEXTURE_2D, gl_texture);
 				gl.uniform1i(gl_shader.uniforms['uSampler'], 0);
@@ -7703,17 +7703,17 @@ renderWebGL.prototype.drawPose = function (spine_pose, atlas_data)
 				var gl_vertex = attachment_info.gl_vertex;
 
 				gl.useProgram(gl_shader.program);
-				
+
 				gl.uniformMatrix3fv(gl_shader.uniforms['uProjection'], false, gl_projection);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uModelviewArray[0]'], false, render.gl_skin_shader_modelview_array);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uTexMatrix'], false, gl_tex_matrix);
 				gl.uniform4fv(gl_shader.uniforms['uColor'], gl_color);
 				gl.uniform1f(gl_shader.uniforms['uMorphWeight'], pct);
-				
+
 				gl.activeTexture(gl.TEXTURE0);
 				gl.bindTexture(gl.TEXTURE_2D, gl_texture);
 				gl.uniform1i(gl_shader.uniforms['uSampler'], 0);
-				
+
 				glSetupAttribute(gl, gl_shader, 'aVertexPosition', gl_vertex.position);
 				glSetupAttribute(gl, gl_shader, 'aVertexBlenders{index}', gl_vertex.blenders, render.gl_skin_shader_blenders_count);
 				glSetupAttribute(gl, gl_shader, 'aVertexMorph0Position', anim_ffd_keyframe0.gl_vertex);
@@ -7742,12 +7742,12 @@ renderWebGL.prototype.drawPose = function (spine_pose, atlas_data)
 				var gl_vertex = attachment_info.gl_vertex;
 
 				gl.useProgram(gl_shader.program);
-				
+
 				gl.uniformMatrix3fv(gl_shader.uniforms['uProjection'], false, gl_projection);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uModelviewArray[0]'], false, render.gl_skin_shader_modelview_array);
 				gl.uniformMatrix3fv(gl_shader.uniforms['uTexMatrix'], false, gl_tex_matrix);
 				gl.uniform4fv(gl_shader.uniforms['uColor'], gl_color);
-				
+
 				gl.activeTexture(gl.TEXTURE0);
 				gl.bindTexture(gl.TEXTURE_2D, gl_texture);
 				gl.uniform1i(gl_shader.uniforms['uSampler'], 0);
@@ -7759,7 +7759,7 @@ renderWebGL.prototype.drawPose = function (spine_pose, atlas_data)
 				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl_vertex.triangle.buffer);
 				gl.drawElements(gl.TRIANGLES, gl_vertex.triangle.count, gl_vertex.triangle.type, 0);
 				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-				
+
 				glResetAttribute(gl, gl_shader, 'aVertexPosition', gl_vertex.position);
 				glResetAttribute(gl, gl_shader, 'aVertexBlenders{index}', gl_vertex.blenders, render.gl_skin_shader_blenders_count);
 				glResetAttribute(gl, gl_shader, 'aVertexTexCoord', gl_vertex.texcoord);
@@ -7799,7 +7799,7 @@ function vec4ApplyColor (v, color)
 
 function mat3x3Identity (m)
 {
-	m[1] = m[2] = m[3] = 
+	m[1] = m[2] = m[3] =
 	m[5] = m[6] = m[7] = 0.0;
 	m[0] = m[4] = m[8] = 1.0;
 	return m;
@@ -8049,4 +8049,3 @@ function glResetAttribute(gl, shader, format, vertex, count)
 		gl.disableVertexAttribArray(attrib);
 	}
 }
-

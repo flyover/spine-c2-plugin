@@ -19,7 +19,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 	// *** CHANGE THE PLUGIN ID HERE *** - must match the "id" property in edittime.js
 	//                            vvvvvvvv
 	var pluginProto = cr.plugins_.SpinePlugin.prototype;
-		
+
 	/////////////////////////////////////
 	// Object type class
 	pluginProto.Type = function(plugin)
@@ -41,11 +41,11 @@ cr.plugins_.SpinePlugin = function(runtime)
 	{
 		this.type = type;
 		this.runtime = type.runtime;
-		
+
 		// any other properties you need, e.g...
 		// this.myValue = 0;
 	};
-	
+
 	var instanceProto = pluginProto.Instance.prototype;
 
 	// called whenever an instance is created
@@ -169,7 +169,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 		this.runtime.tickMe(this);
 	};
-	
+
 	// called whenever an instance is destroyed
 	// note the runtime may keep the object after this call for recycling; be sure
 	// to release/recycle/reset any references to other objects in this function.
@@ -220,7 +220,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 			instance.extra.atlas_data = null;
 		}
 	};
-	
+
 	// called when saving the full state of the game
 	instanceProto.saveToJSON = function ()
 	{
@@ -232,7 +232,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 			//"myValue": this.myValue
 		};
 	};
-	
+
 	// called when loading the full state of the game
 	instanceProto.loadFromJSON = function (o)
 	{
@@ -255,7 +255,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 			instance.runtime.redraw = true;
 		}
 	}
-	
+
 	// only called if a layout object - draw to a canvas 2D context
 	instanceProto.draw = function(ctx)
 	{
@@ -289,7 +289,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 			ctx.restore();
 		}
 	};
-	
+
 	// only called if a layout object in WebGL mode - draw to the WebGL context
 	// 'glw' is not a WebGL context, it's a wrapper - you can find its methods in GLWrap.js in the install
 	// directory or just copy what other plugins do.
@@ -347,7 +347,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 			glw.switchProgram(0);
 		}
 	};
-	
+
 	// The comments around these functions ensure they are removed when exporting, since the
 	// debugger code is no longer relevant after publishing.
 	/**BEGIN-PREVIEWONLY**/
@@ -366,13 +366,13 @@ cr.plugins_.SpinePlugin = function(runtime)
 				// "html" (optional, default false): set to true to interpret the name and value
 				//									 as HTML strings rather than simple plain text
 				// "readonly" (optional, default false): set to true to disable editing the property
-				
+
 				// Example:
 				// {"name": "My property", "value": this.myValue}
 			]
 		});
 	};
-	
+
 	instanceProto.onDebugValueEdited = function (header, name, value)
 	{
 		// Called when a non-readonly property has been edited in the debugger. Usually you only
@@ -393,11 +393,11 @@ cr.plugins_.SpinePlugin = function(runtime)
 		// return true if number is positive
 		return myparam >= 0;
 	};
-	
+
 	// ... other conditions here ...
-	
+
 	pluginProto.cnds = new Cnds();
-	
+
 	//////////////////////////////////////
 	// Actions
 	function Acts() {};
@@ -408,15 +408,15 @@ cr.plugins_.SpinePlugin = function(runtime)
 		// alert the message
 		alert(myparam);
 	};
-	
+
 	// ... other actions here ...
-	
+
 	pluginProto.acts = new Acts();
-	
+
 	//////////////////////////////////////
 	// Expressions
 	function Exps() {};
-	
+
 	// the example expression
 	Exps.prototype.MyExpression = function (ret)	// 'ret' must always be the first parameter - always return the expression's result through it!
 	{
@@ -425,9 +425,9 @@ cr.plugins_.SpinePlugin = function(runtime)
 		// ret.set_string("Hello");		// for ef_return_string
 		// ret.set_any("woo");			// for ef_return_any, accepts either a number or string
 	};
-	
+
 	// ... other expressions here ...
-	
+
 	pluginProto.exps = new Exps();
 
 }());
