@@ -430,4 +430,45 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 	pluginProto.exps = new Exps();
 
+	function loadText (url, callback)
+	{
+		var req = new XMLHttpRequest();
+		if (url)
+		{
+			req.open("GET", url, true);
+			req.responseType = 'text';
+			req.addEventListener('error', function (event) { callback("error", null); }, false);
+			req.addEventListener('abort', function (event) { callback("abort", null); }, false);
+			req.addEventListener('load', function (event)
+			{
+				if (req.status === 200)
+				{
+					callback(null, req.response);
+				}
+				else
+				{
+					callback(req.response, null);
+				}
+			},
+			false);
+			req.send();
+		}
+		else
+		{
+			callback("error", null);
+		}
+		return req;
+	}
+
+	function loadImage (url, callback)
+	{
+		var image = new Image();
+		image.crossOrigin = "Anonymous";
+		image.addEventListener('error', function (event) { callback("error", null); }, false);
+		image.addEventListener('abort', function (event) { callback("abort", null); }, false);
+		image.addEventListener('load', function (event) { callback(null, image); }, false);
+		image.src = url;
+		return image;
+	}
+
 }());
