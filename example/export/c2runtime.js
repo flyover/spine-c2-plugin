@@ -14326,10 +14326,7 @@ goog.module.getInternal_ = function(name) {
   }
 };
 /**
- * @private {?{
- *   moduleName: (string|undefined),
- *   declareTestMethods: boolean
- * }}
+ * @private {?{moduleName: (string|undefined)}}
  */
 goog.moduleLoaderState_ = null;
 /**
@@ -14338,25 +14335,6 @@ goog.moduleLoaderState_ = null;
  */
 goog.isInModuleLoader_ = function() {
   return goog.moduleLoaderState_ != null;
-};
-/**
- * Indicate that a module's exports that are known test methods should
- * be copied to the global object.  This makes the test methods visible to
- * test runners that inspect the global object.
- *
- * TODO(johnlenz): Make the test framework aware of goog.module so
- * that this isn't necessary. Alternately combine this with goog.setTestOnly
- * to minimize boiler plate.
- * @suppress {missingProvide}
- * @deprecated This approach does not translate to ES6 module syntax, instead
- *    use goog.testing.testSuite to declare the test methods.
- */
-goog.module.declareTestMethods = function() {
-  if (!goog.isInModuleLoader_()) {
-    throw new Error('goog.module.declareTestMethods must be called from ' +
-        'within a goog.module');
-  }
-  goog.moduleLoaderState_.declareTestMethods = true;
 };
 /**
  * Provide the module's exports as a globally accessible object under the
@@ -14691,7 +14669,7 @@ if (goog.DEPENDENCIES_ENABLED) {
    * @private
    */
   goog.findBasePath_ = function() {
-    if (goog.global.CLOSURE_BASE_PATH) {
+    if (goog.isDef(goog.global.CLOSURE_BASE_PATH)) {
       goog.basePath = goog.global.CLOSURE_BASE_PATH;
       return;
     } else if (!goog.inHtmlDocument_()) {
@@ -14725,8 +14703,8 @@ if (goog.DEPENDENCIES_ENABLED) {
     }
   };
   /** @const @private {boolean} */
-  goog.IS_OLD_IE_ = !goog.global.atob && goog.global.document &&
-      goog.global.document.all;
+  goog.IS_OLD_IE_ = !!(!goog.global.atob && goog.global.document &&
+      goog.global.document.all);
   /**
    * Given a URL initiate retrieval and execution of the module.
    * @param {string} src Script source URL.
@@ -14844,8 +14822,7 @@ if (goog.DEPENDENCIES_ENABLED) {
   goog.loadModule = function(moduleDef) {
     var previousState = goog.moduleLoaderState_;
     try {
-      goog.moduleLoaderState_ = {
-        moduleName: undefined, declareTestMethods: false};
+      goog.moduleLoaderState_ = {moduleName: undefined};
       var exports;
       if (goog.isFunction(moduleDef)) {
         exports = moduleDef.call(goog.global, {});
@@ -14864,17 +14841,6 @@ if (goog.DEPENDENCIES_ENABLED) {
         Object.seal(exports);
       }
       goog.loadedModules_[moduleName] = exports;
-      if (goog.moduleLoaderState_.declareTestMethods) {
-        for (var entry in exports) {
-          if (entry.indexOf('test', 0) === 0 ||
-              entry == 'tearDown' ||
-              entry == 'setUp' ||
-              entry == 'setUpPage' ||
-              entry == 'tearDownPage') {
-            goog.global[entry] = exports[entry];
-          }
-        }
-      }
     } finally {
       goog.moduleLoaderState_ = previousState;
     }
@@ -16011,6 +15977,9 @@ goog.tagUnsealableClass = function(ctr) {
  */
 goog.UNSEALABLE_CONSTRUCTOR_PROPERTY_ = 'goog_defineClass_legacy_unsealable';
 goog.provide('atlas');
+goog.provide('atlas.Data');
+goog.provide('atlas.Page');
+goog.provide('atlas.Site');
 /**
  * @constructor
  */
@@ -19303,45 +19272,6 @@ Object.defineProperty(spine.Pose.prototype, 'tweened_skel_bones', { get: /** @th
 Object.defineProperty(spine.Pose.prototype, 'tweened_skel_slots', { get: /** @this {spine.Pose} */ function () { spine.deprecated(); return this.slots; } });
 Object.defineProperty(spine.Pose.prototype, 'tweened_skel_slot_keys', { get: /** @this {spine.Pose} */ function () { spine.deprecated(); return this.slot_keys; } });
 Object.defineProperty(spine.Pose.prototype, 'tweened_events', { get: /** @this {spine.Pose} */ function () { spine.deprecated(); return this.events; } });
-function loadText (url, callback)
-{
-	var req = new XMLHttpRequest();
-	if (url)
-	{
-		req.open("GET", url, true);
-		req.responseType = 'text';
-		req.addEventListener('error', function (event) { callback("error", null); }, false);
-		req.addEventListener('abort', function (event) { callback("abort", null); }, false);
-		req.addEventListener('load', function (event)
-		{
-			if (req.status === 200)
-			{
-				callback(null, req.response);
-			}
-			else
-			{
-				callback(req.response, null);
-			}
-		},
-		false);
-		req.send();
-	}
-	else
-	{
-		callback("error", null);
-	}
-	return req;
-}
-function loadImage (url, callback)
-{
-	var image = new Image();
-	image.crossOrigin = "Anonymous";
-	image.addEventListener('error', function (event) { callback("error", null); }, false);
-	image.addEventListener('abort', function (event) { callback("abort", null); }, false);
-	image.addEventListener('load', function (event) { callback(null, image); }, false);
-	image.src = url;
-	return image;
-}
 goog.provide('renderCtx2D');
 /**
  * @constructor
@@ -19989,7 +19919,6 @@ renderWebGL = function (gl)
 	render.gl_region_vertex = {};
 	render.gl_region_vertex.position = glMakeVertex(gl, new Float32Array([ -1, -1,  1, -1,  1,  1, -1,  1 ]), 2, gl.ARRAY_BUFFER, gl.STATIC_DRAW); // [ x, y ]
 	render.gl_region_vertex.texcoord = glMakeVertex(gl, new Float32Array([  0,  1,  1,  1,  1,  0,  0,  0 ]), 2, gl.ARRAY_BUFFER, gl.STATIC_DRAW); // [ u, v ]
-	render.gl_region_vertex.triangle = glMakeVertex(gl, new Uint16Array([ 0, 1, 2, 0, 2, 3 ]), 1, gl.ELEMENT_ARRAY_BUFFER, gl.STATIC_DRAW); // [ i0, i1, i2 ]
 	render.gl_skin_shader_modelview_count = 16; // * mat3
 	render.gl_skin_shader_modelview_array = new Float32Array(9 * render.gl_skin_shader_modelview_count);
 	render.gl_skin_shader_blenders_count = 8; // * vec2
@@ -20160,10 +20089,10 @@ renderWebGL.prototype.loadPose = function (spine_pose, atlas_data, images)
 				var attachment_info_map = slot_info.attachment_info_map = slot_info.attachment_info_map || {};
 				var attachment_info = attachment_info_map[attachment_key] = {};
 				attachment_info.type = attachment.type;
-				var vertex_count = attachment_info.vertex_count = attachment.vertices.length / 2;
-				var vertex_position = attachment_info.vertex_position = new Float32Array(attachment.vertices);
-				var vertex_texcoord = attachment_info.vertex_texcoord = new Float32Array(attachment.uvs);
-				var vertex_triangle = attachment_info.vertex_triangle = new Uint16Array(attachment.triangles);
+				var vertex_count = attachment.vertices.length / 2;
+				var vertex_position = new Float32Array(attachment.vertices);
+				var vertex_texcoord = new Float32Array(attachment.uvs);
+				var vertex_triangle = new Uint16Array(attachment.triangles);
 				var gl_vertex = attachment_info.gl_vertex = {};
 				gl_vertex.position = glMakeVertex(gl, vertex_position, 2, gl.ARRAY_BUFFER, gl.STATIC_DRAW);
 				gl_vertex.texcoord = glMakeVertex(gl, vertex_texcoord, 2, gl.ARRAY_BUFFER, gl.STATIC_DRAW);
@@ -20181,7 +20110,7 @@ renderWebGL.prototype.loadPose = function (spine_pose, atlas_data, images)
 						ffd_attachment.ffd_keyframes.forEach(function (ffd_keyframe, ffd_keyframe_index)
 						{
 							var anim_ffd_keyframe = anim_ffd_keyframes[ffd_keyframe_index] = {};
-							var vertex = anim_ffd_keyframe.vertex = new Float32Array(2 * vertex_count);
+							var vertex = new Float32Array(2 * vertex_count);
 							vertex.subarray(ffd_keyframe.offset, ffd_keyframe.offset + ffd_keyframe.vertices.length).set(new Float32Array(ffd_keyframe.vertices));
 							anim_ffd_keyframe.gl_vertex = glMakeVertex(gl, vertex, 2, gl.ARRAY_BUFFER, gl.STATIC_DRAW);
 						});
@@ -20193,11 +20122,11 @@ renderWebGL.prototype.loadPose = function (spine_pose, atlas_data, images)
 				var attachment_info_map = slot_info.attachment_info_map = slot_info.attachment_info_map || {};
 				var attachment_info = attachment_info_map[attachment_key] = {};
 				attachment_info.type = attachment.type;
-				var vertex_count = attachment_info.vertex_count = attachment.uvs.length / 2;
-				var vertex_position = attachment_info.vertex_position = new Float32Array(2 * vertex_count); // [ x, y ]
-				var vertex_blenders = attachment_info.vertex_blenders = new Float32Array(2 * render.gl_skin_shader_blenders_count * vertex_count); // [ i, w ]
-				var vertex_texcoord = attachment_info.vertex_texcoord = new Float32Array(attachment.uvs);
-				var vertex_triangle = attachment_info.vertex_triangle = new Uint16Array(attachment.triangles);
+				var vertex_count = attachment.uvs.length / 2;
+				var vertex_position = new Float32Array(2 * vertex_count); // [ x, y ]
+				var vertex_blenders = new Float32Array(2 * render.gl_skin_shader_blenders_count * vertex_count); // [ i, w ]
+				var vertex_texcoord = new Float32Array(attachment.uvs);
+				var vertex_triangle = new Uint16Array(attachment.triangles);
 				var blend_bone_index_array = attachment_info.blend_bone_index_array = [];
 				for (var vertex_index = 0, index = 0; vertex_index < vertex_count; ++vertex_index)
 				{
@@ -20220,38 +20149,31 @@ renderWebGL.prototype.loadPose = function (spine_pose, atlas_data, images)
 						blender_array.forEach(function (blend) { weight_sum += blend.weight; });
 						blender_array.forEach(function (blend) { blend.weight /= weight_sum; });
 					}
-					blender_array.forEach(function (blend)
+					var position_x = 0;
+					var position_y = 0;
+					var blend_position = new spine.Vector();
+					var vertex_blenders_offset = vertex_index * 2 * render.gl_skin_shader_blenders_count;
+					blender_array.forEach(function (blend, index)
 					{
 						if (blend_bone_index_array.indexOf(blend.bone_index) === -1)
 						{
 							blend_bone_index_array.push(blend.bone_index);
 						}
-					});
-					while (blender_array.length < render.gl_skin_shader_blenders_count)
-					{
-						blender_array.push({ position: new spine.Vector(0, 0), bone_index: -1, weight: 0 });
-					}
-					if (blend_bone_index_array.length > render.gl_skin_shader_modelview_count)
-					{
-						console.log("blend bone index array length for", attachmentPkey, "is", blend_bone_index_array.length, "greater than", render.gl_skin_shader_modelview_count);
-					}
-					var position = new spine.Vector(0, 0);
-					var blend_position = new spine.Vector();
-					var vertex_blenders_offset = vertex_index * 2 * render.gl_skin_shader_blenders_count;
-					blender_array.forEach(function (blend, index)
-					{
-						if (blend.bone_index === -1) { return; }
 						var bone_key = spine_pose.data.bone_keys[blend.bone_index];
 						var bone = spine_pose.data.bones[bone_key];
 						spine.Space.transform(bone.world_space, blend.position, blend_position);
-						position.x += blend_position.x * blend.weight;
-						position.y += blend_position.y * blend.weight;
+						position_x += blend_position.x * blend.weight;
+						position_y += blend_position.y * blend.weight;
 						vertex_blenders[vertex_blenders_offset++] = blend_bone_index_array.indexOf(blend.bone_index);
 						vertex_blenders[vertex_blenders_offset++] = blend.weight;
 					});
 					var vertex_position_offset = vertex_index * 2;
-					vertex_position[vertex_position_offset++] = position.x;
-					vertex_position[vertex_position_offset++] = position.y;
+					vertex_position[vertex_position_offset++] = position_x;
+					vertex_position[vertex_position_offset++] = position_y;
+					if (blend_bone_index_array.length > render.gl_skin_shader_modelview_count)
+					{
+						console.log("blend bone index array length for", attachmentPkey, "is", blend_bone_index_array.length, "greater than", render.gl_skin_shader_modelview_count);
+					}
 				}
 				var gl_vertex = attachment_info.gl_vertex = {};
 				gl_vertex.position = glMakeVertex(gl, vertex_position, 2, gl.ARRAY_BUFFER, gl.STATIC_DRAW);
@@ -20271,7 +20193,7 @@ renderWebGL.prototype.loadPose = function (spine_pose, atlas_data, images)
 						ffd_attachment.ffd_keyframes.forEach(function (ffd_keyframe, ffd_keyframe_index)
 						{
 							var anim_ffd_keyframe = anim_ffd_keyframes[ffd_keyframe_index] = {};
-							var vertex = anim_ffd_keyframe.vertex = new Float32Array(2 * vertex_count);
+							var vertex = new Float32Array(2 * vertex_count);
 							for (var vertex_index = 0, index = 0, ffd_index = 0; vertex_index < vertex_count; ++vertex_index)
 							{
 								var blender_count = attachment.vertices[index++];
@@ -20431,9 +20353,7 @@ renderWebGL.prototype.drawPose = function (spine_pose, atlas_data)
 			gl.uniform1i(gl_shader.uniforms['uSampler'], 0);
 			glSetupAttribute(gl, gl_shader, 'aVertexPosition', gl_vertex.position);
 			glSetupAttribute(gl, gl_shader, 'aVertexTexCoord', gl_vertex.texcoord);
-			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl_vertex.triangle.buffer);
-			gl.drawElements(gl.TRIANGLES, gl_vertex.triangle.count, gl_vertex.triangle.type, 0);
-			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+			gl.drawArrays(gl.TRIANGLE_FAN, 0, gl_vertex.position.count);
 			glResetAttribute(gl, gl_shader, 'aVertexPosition', gl_vertex.position);
 			glResetAttribute(gl, gl_shader, 'aVertexTexCoord', gl_vertex.texcoord);
 			gl.bindTexture(gl.TEXTURE_2D, null);
@@ -20814,8 +20734,8 @@ function glMakeVertex (gl, type_array, size, buffer_type, buffer_draw)
 {
 	var vertex = {};
 	if (type_array instanceof Float32Array) { vertex.type = gl.FLOAT; }
-	else if (type_array instanceof Int8Array) { vertex.type = gl.CHAR; }
-	else if (type_array instanceof Uint8Array) { vertex.type = gl.UNSIGNED_CHAR; }
+	else if (type_array instanceof Int8Array) { vertex.type = gl.BYTE; }
+	else if (type_array instanceof Uint8Array) { vertex.type = gl.UNSIGNED_BYTE; }
 	else if (type_array instanceof Int16Array) { vertex.type = gl.SHORT; }
 	else if (type_array instanceof Uint16Array) { vertex.type = gl.UNSIGNED_SHORT; }
 	else if (type_array instanceof Int32Array) { vertex.type = gl.INT; }
@@ -20898,6 +20818,8 @@ cr.plugins_.SpinePlugin = function(runtime)
 	instanceProto.onCreate = function()
 	{
 		var instance = this;
+		instance.extra.anim_rate = 1.0;
+		instance.extra.loop_count = 0;
 		var gl = this.runtime.gl;
 		if (gl)
 		{
@@ -21039,7 +20961,14 @@ cr.plugins_.SpinePlugin = function(runtime)
 		if (!instance.extra.loading && instance.extra.spine_pose)
 		{
 			var dt = this.runtime.getDt(this);
-			instance.extra.spine_pose.update(dt * 1000);
+			var anim_dt = dt * 1000 * instance.extra.anim_rate;
+			var anim_time = instance.extra.spine_pose.time;
+			var anim_length = instance.extra.spine_pose.curAnimLength();
+			if (((anim_time + anim_dt) < 0) || ((anim_time + anim_dt) > anim_length))
+			{
+				++instance.extra.loop_count;
+			}
+			instance.extra.spine_pose.update(dt * 1000 * instance.extra.anim_rate);
 			instance.extra.spine_pose.strike();
 			instance.runtime.redraw = true;
 		}
@@ -21107,20 +21036,171 @@ cr.plugins_.SpinePlugin = function(runtime)
 	{
 		return myparam >= 0;
 	};
+	Cnds.prototype.HasLooped = function ()
+	{
+		var instance = this;
+		return instance.extra.loop_count >= 1;
+	}
+	Cnds.prototype.HasLoopedCount = function (count)
+	{
+		var instance = this;
+		return instance.extra.loop_count >= count;
+	}
 	pluginProto.cnds = new Cnds();
 	function Acts() {};
 	Acts.prototype.MyAction = function (myparam)
 	{
 		alert(myparam);
 	};
+	Acts.prototype.SetSkin = function (skin_key)
+	{
+		var instance = this;
+		instance.extra.spine_pose.setSkin(skin_key);
+	}
+	Acts.prototype.SetPrevSkin = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var skin_index = spine_pose.data.skin_keys.indexOf(spine_pose.skin_key);
+		if (skin_index <= 0)
+		{
+			skin_index = spine_pose.data.skin_keys.length;
+		}
+		--skin_index;
+		instance.extra.spine_pose.setSkin(spine_pose.data.skin_keys[skin_index]);
+	}
+	Acts.prototype.SetNextSkin = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var skin_index = spine_pose.data.skin_keys.indexOf(spine_pose.skin_key);
+		++skin_index;
+		if (skin_index >= spine_pose.data.skin_keys.length)
+		{
+			skin_index = 0;
+		}
+		instance.extra.spine_pose.setSkin(spine_pose.data.skin_keys[skin_index]);
+	}
+	Acts.prototype.SetAnim = function (anim_key)
+	{
+		var instance = this;
+		if (anim_key !== instance.extra.spine_pose.anim_key)
+		{
+			instance.extra.spine_pose.setAnim(anim_key);
+			instance.extra.loop_count = 0;
+		}
+	}
+	Acts.prototype.SetPrevAnim = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var anim_index = spine_pose.data.anim_keys.indexOf(spine_pose.anim_key);
+		if (anim_index <= 0)
+		{
+			anim_index = spine_pose.data.anim_keys.length;
+		}
+		--anim_index;
+		instance.extra.spine_pose.setAnim(spine_pose.data.anim_keys[anim_index]);
+		instance.extra.loop_count = 0;
+	}
+	Acts.prototype.SetNextAnim = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var anim_index = spine_pose.data.anim_keys.indexOf(spine_pose.anim_key);
+		++anim_index;
+		if (anim_index >= spine_pose.data.anim_keys.length)
+		{
+			anim_index = 0;
+		}
+		instance.extra.spine_pose.setAnim(spine_pose.data.anim_keys[anim_index]);
+		instance.extra.loop_count = 0;
+	}
+	Acts.prototype.SetTime = function (time)
+	{
+		var instance = this;
+		if (time !== instance.extra.spine_pose.time)
+		{
+			instance.extra.spine_pose.setTime(time);
+			instance.extra.loop_count = 0;
+		}
+	}
+	Acts.prototype.SetRate = function (rate)
+	{
+		var instance = this;
+		instance.extra.anim_rate = rate;
+	}
+	Acts.prototype.ResetLoopCount = function ()
+	{
+		var instance = this;
+		instance.extra.loop_count = 0;
+	}
 	pluginProto.acts = new Acts();
 	function Exps() {};
 	Exps.prototype.MyExpression = function (ret)	// 'ret' must always be the first parameter - always return the expression's result through it!
 	{
 		ret.set_int(1337);				// return our value
 	};
+	Exps.prototype.GetTime = function (ret)
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		ret.set_float(spine_pose.time);
+	}
+	Exps.prototype.GetLength = function (ret)
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		ret.set_float(spine_pose.curAnimLength());
+	}
+	Exps.prototype.GetRate = function (ret)
+	{
+		var instance = this;
+		ret.set_float(instance.extra.anim_rate);
+	}
 	pluginProto.exps = new Exps();
+	function loadText (url, callback)
+	{
+		var req = new XMLHttpRequest();
+		if (url)
+		{
+			req.open("GET", url, true);
+			req.responseType = 'text';
+			req.addEventListener('error', function (event) { callback("error", null); }, false);
+			req.addEventListener('abort', function (event) { callback("abort", null); }, false);
+			req.addEventListener('load', function (event)
+			{
+				if (req.status === 200)
+				{
+					callback(null, req.response);
+				}
+				else
+				{
+					callback(req.response, null);
+				}
+			},
+			false);
+			req.send();
+		}
+		else
+		{
+			callback("error", null);
+		}
+		return req;
+	}
+	function loadImage (url, callback)
+	{
+		var image = new Image();
+		image.crossOrigin = "Anonymous";
+		image.addEventListener('error', function (event) { callback("error", null); }, false);
+		image.addEventListener('abort', function (event) { callback("abort", null); }, false);
+		image.addEventListener('load', function (event) { callback(null, image); }, false);
+		image.src = url;
+		return image;
+	}
 }());
 cr.getObjectRefTable = function () { return [
-	cr.plugins_.SpinePlugin
+	cr.plugins_.SpinePlugin,
+	cr.plugins_.SpinePlugin.prototype.cnds.HasLoopedCount,
+	cr.plugins_.SpinePlugin.prototype.acts.SetNextAnim
 ];};
