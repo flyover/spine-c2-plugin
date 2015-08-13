@@ -57,6 +57,9 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 		var instance = this;
 
+		instance.extra.anim_rate = 1.0;
+		instance.extra.loop_count = 0;
+
 		var gl = this.runtime.gl;
 		if (gl)
 		{
@@ -250,7 +253,14 @@ cr.plugins_.SpinePlugin = function(runtime)
 		if (!instance.extra.loading && instance.extra.spine_pose)
 		{
 			var dt = this.runtime.getDt(this);
-			instance.extra.spine_pose.update(dt * 1000);
+			var anim_dt = dt * 1000 * instance.extra.anim_rate;
+			var anim_time = instance.extra.spine_pose.time;
+			var anim_length = instance.extra.spine_pose.curAnimLength();
+			if (((anim_time + anim_dt) < 0) || ((anim_time + anim_dt) > anim_length))
+			{
+				++instance.extra.loop_count;
+			}
+			instance.extra.spine_pose.update(dt * 1000 * instance.extra.anim_rate);
 			instance.extra.spine_pose.strike();
 			instance.runtime.redraw = true;
 		}
@@ -396,6 +406,18 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 	// ... other conditions here ...
 
+	Cnds.prototype.HasLooped = function ()
+	{
+		var instance = this;
+		return instance.extra.loop_count >= 1;
+	}
+
+	Cnds.prototype.HasLoopedCount = function (count)
+	{
+		var instance = this;
+		return instance.extra.loop_count >= count;
+	}
+
 	pluginProto.cnds = new Cnds();
 
 	//////////////////////////////////////
@@ -410,6 +432,98 @@ cr.plugins_.SpinePlugin = function(runtime)
 	};
 
 	// ... other actions here ...
+
+	Acts.prototype.SetSkin = function (skin_key)
+	{
+		var instance = this;
+		instance.extra.spine_pose.setSkin(skin_key);
+	}
+
+	Acts.prototype.SetPrevSkin = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var skin_index = spine_pose.data.skin_keys.indexOf(spine_pose.skin_key);
+		if (skin_index <= 0)
+		{
+			skin_index = spine_pose.data.skin_keys.length;
+		}
+		--skin_index;
+		instance.extra.spine_pose.setSkin(spine_pose.data.skin_keys[skin_index]);
+	}
+
+	Acts.prototype.SetNextSkin = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var skin_index = spine_pose.data.skin_keys.indexOf(spine_pose.skin_key);
+		++skin_index;
+		if (skin_index >= spine_pose.data.skin_keys.length)
+		{
+			skin_index = 0;
+		}
+		instance.extra.spine_pose.setSkin(spine_pose.data.skin_keys[skin_index]);
+	}
+
+	Acts.prototype.SetAnim = function (anim_key)
+	{
+		var instance = this;
+		if (anim_key !== instance.extra.spine_pose.anim_key)
+		{
+			instance.extra.spine_pose.setAnim(anim_key);
+			instance.extra.loop_count = 0;
+		}
+	}
+
+	Acts.prototype.SetPrevAnim = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var anim_index = spine_pose.data.anim_keys.indexOf(spine_pose.anim_key);
+		if (anim_index <= 0)
+		{
+			anim_index = spine_pose.data.anim_keys.length;
+		}
+		--anim_index;
+		instance.extra.spine_pose.setAnim(spine_pose.data.anim_keys[anim_index]);
+		instance.extra.loop_count = 0;
+	}
+
+	Acts.prototype.SetNextAnim = function ()
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		var anim_index = spine_pose.data.anim_keys.indexOf(spine_pose.anim_key);
+		++anim_index;
+		if (anim_index >= spine_pose.data.anim_keys.length)
+		{
+			anim_index = 0;
+		}
+		instance.extra.spine_pose.setAnim(spine_pose.data.anim_keys[anim_index]);
+		instance.extra.loop_count = 0;
+	}
+
+	Acts.prototype.SetTime = function (time)
+	{
+		var instance = this;
+		if (time !== instance.extra.spine_pose.time)
+		{
+			instance.extra.spine_pose.setTime(time);
+			instance.extra.loop_count = 0;
+		}
+	}
+
+	Acts.prototype.SetRate = function (rate)
+	{
+		var instance = this;
+		instance.extra.anim_rate = rate;
+	}
+
+	Acts.prototype.ResetLoopCount = function ()
+	{
+		var instance = this;
+		instance.extra.loop_count = 0;
+	}
 
 	pluginProto.acts = new Acts();
 
@@ -427,6 +541,26 @@ cr.plugins_.SpinePlugin = function(runtime)
 	};
 
 	// ... other expressions here ...
+
+	Exps.prototype.GetTime = function (ret)
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		ret.set_float(spine_pose.time);
+	}
+
+	Exps.prototype.GetLength = function (ret)
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		ret.set_float(spine_pose.curAnimLength());
+	}
+
+	Exps.prototype.GetRate = function (ret)
+	{
+		var instance = this;
+		ret.set_float(instance.extra.anim_rate);
+	}
 
 	pluginProto.exps = new Exps();
 

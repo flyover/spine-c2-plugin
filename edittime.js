@@ -58,6 +58,13 @@
 AddNumberParam("Number", "Enter a number to test if positive.");
 AddCondition(0, cf_none, "Is number positive", "My category", "{0} is positive", "Description for my condition!", "MyCondition");
 
+var cnd_id = 1;
+
+AddCondition(cnd_id++, cf_none, "Has looped", "Spine Conditions", "Animation has looped", "Animation has looped.", "HasLooped");
+
+AddNumberParam("Number", "Enter number of animation playback loops.");
+AddCondition(cnd_id++, cf_none, "Has looped N times", "Spine Conditions", "Animation has looped {0} times", "Animation has looped a number of times.", "HasLoopedCount");
+
 ////////////////////////////////////////
 // Actions
 
@@ -73,6 +80,30 @@ AddCondition(0, cf_none, "Is number positive", "My category", "{0} is positive",
 AddStringParam("Message", "Enter a string to alert.");
 AddAction(0, af_none, "Alert", "My category", "Alert {0}", "Description for my action!", "MyAction");
 
+var act_id = 1;
+
+AddStringParam("Skin Key", "Enter the Spine skin key.");
+AddAction(act_id++, af_none, "Set Skin", "Spine Actions", "Set Skin {0}", "Change the skin.", "SetSkin");
+
+AddAction(act_id++, af_none, "Set Prev Skin", "Spine Actions", "Set Prev Skin", "Change to the previous skin.", "SetPrevSkin");
+
+AddAction(act_id++, af_none, "Set Next Skin", "Spine Actions", "Set Next Skin", "Change to the next skin.", "SetNextSkin");
+
+AddStringParam("Anim Key", "Enter the Spine animation key.");
+AddAction(act_id++, af_none, "Set Anim", "Spine Actions", "Set Anim {0}", "Change the animation.", "SetAnim");
+
+AddAction(act_id++, af_none, "Set Prev Anim", "Spine Actions", "Set Prev Anim", "Change to the previous animation.", "SetPrevAnim");
+
+AddAction(act_id++, af_none, "Set Next Anim", "Spine Actions", "Set Next Anim", "Change to the next animation.", "SetNextAnim");
+
+AddNumberParam("Time", "Enter the time in milliseconds.");
+AddAction(act_id++, af_none, "Set Time", "Spine Actions", "Set Time {0}", "Set the animation playback time.", "SetTime");
+
+AddNumberParam("Rate", "Enter the rate.");
+AddAction(act_id++, af_none, "Set Rate", "Spine Actions", "Set Rate {0}", "Set the animation playback rate.", "SetRate");
+
+AddAction(act_id++, af_none, "Reset Loop Count", "Spine Actions", "Reset Loop Count", "Reset the animation loop count.", "ResetLoopCount");
+
 ////////////////////////////////////////
 // Expressions
 
@@ -86,6 +117,16 @@ AddAction(0, af_none, "Alert", "My category", "Alert {0}", "Description for my a
 
 // example
 AddExpression(0, ef_return_number, "Leet expression", "My category", "MyExpression", "Return the number 1337.");
+
+var exp_id = 1;
+
+AddExpression(exp_id++, ef_return_number, "Get Time", "Spine Expressions", "GetTime", "Get the animation playback time.");
+
+AddExpression(exp_id++, ef_return_number, "Get Length", "Spine Expressions", "GetLength", "Get the animation playback length.");
+
+AddExpression(exp_id++, ef_return_number, "Get Rate", "Spine Expressions", "GetRate", "Get the animation playback rate.");
+
+AddExpression(exp_id++, ef_return_number, "Get Loop Count", "Spine Expressions", "GetLoopCount", "Get the animation loop count.");
 
 ////////////////////////////////////////
 ACESDone();
