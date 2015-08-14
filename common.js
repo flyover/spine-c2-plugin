@@ -6719,9 +6719,9 @@ function ctxApplyAtlasSitePosition (ctx, site)
 {
 	if (site)
 	{
-		ctx.scale(1 / site.w, 1 / site.h);
-		ctx.translate(site.offset_x, site.offset_y);
-		ctx.scale(site.original_w, site.original_h);
+		ctx.scale(1 / site.original_w, 1 / site.original_h);
+		ctx.translate(2*site.offset_x - (site.original_w - site.w), (site.original_h - site.h) - 2*site.offset_y);
+		ctx.scale(site.w, site.h);
 	}
 }
 
@@ -7798,9 +7798,9 @@ function mat3x3ApplyAtlasSitePosition (m, site)
 {
 	if (site)
 	{
-		mat3x3Scale(m, 1 / site.w, 1 / site.h);
-		mat3x3Translate(m, site.offset_x, site.offset_y);
-		mat3x3Scale(m, site.original_w, site.original_h);
+		mat3x3Scale(m, 1 / site.original_w, 1 / site.original_h);
+		mat3x3Translate(m, 2*site.offset_x - (site.original_w - site.w), (site.original_h - site.h) - 2*site.offset_y);
+		mat3x3Scale(m, site.w, site.h);
 	}
 	return m;
 }
