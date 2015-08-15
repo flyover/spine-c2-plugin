@@ -2582,12 +2582,22 @@ atlas.Data = function ()
 
 /**
  * @return {atlas.Data}
+ */
+atlas.Data.prototype.drop = function ()
+{
+	var data = this;
+	data.pages = [];
+	data.sites = {};
+	return data;
+}
+
+/**
+ * @return {atlas.Data}
  * @param {string} text
  */
 atlas.Data.prototype.import = function (text)
 {
-	var lines = text.split(/\n|\r\n/);
-	return this.importLines(lines);
+	return this.importAtlasText(text);
 }
 
 /**
@@ -2596,7 +2606,26 @@ atlas.Data.prototype.import = function (text)
  */
 atlas.Data.prototype.export = function (text)
 {
-	var lines = this.exportLines([])
+	return this.exportAtlasText(text);
+}
+
+/**
+ * @return {atlas.Data}
+ * @param {string} text
+ */
+atlas.Data.prototype.importAtlasText = function (text)
+{
+	var lines = text.split(/\n|\r\n/);
+	return this.importAtlasTextLines(lines);
+}
+
+/**
+ * @return {string}
+ * @param {string=} text
+ */
+atlas.Data.prototype.exportAtlasText = function (text)
+{
+	var lines = this.exportAtlasTextLines([])
 	return (text || "") + lines.join('\n');
 }
 
@@ -2604,7 +2633,7 @@ atlas.Data.prototype.export = function (text)
  * @return {atlas.Data}
  * @param {Array.<string>} lines
  */
-atlas.Data.prototype.importLines = function (lines)
+atlas.Data.prototype.importAtlasTextLines = function (lines)
 {
 	var data = this;
 
@@ -2709,7 +2738,7 @@ atlas.Data.prototype.importLines = function (lines)
  * @return {string}
  * @param {Array.<string>=} lines
  */
-atlas.Data.prototype.exportLines = function (lines)
+atlas.Data.prototype.exportAtlasTextLines = function (lines)
 {
 	lines = lines || [];
 
@@ -2724,8 +2753,8 @@ atlas.Data.prototype.exportLines = function (lines)
 		lines.push("filter: " + page.min_filter + "," + page.mag_filter);
 		var repeat = 'none';
 		if ((page.wrap_s === 'Repeat') && (page.wrap_t === 'Repeat')) { repeat = 'xy'; }
-		if (page.wrap_s === 'Repeat') { repeat = 'x'; }
-		if (page.wrap_t === 'Repeat') { repeat = 'y'; }
+		else if (page.wrap_s === 'Repeat') { repeat = 'x'; }
+		else if (page.wrap_t === 'Repeat') { repeat = 'y'; }
 		lines.push("repeat: " + repeat);
 
 		for (var site_key in data.sites)
@@ -2745,19 +2774,37 @@ atlas.Data.prototype.exportLines = function (lines)
 	return lines;
 }
 
-atlas.Data.prototype.importTPS = function (tps_text)
+/**
+ * @return {atlas.Data}
+ * @param {string} tps_text
+ */
+atlas.Data.prototype.importTpsText = function (tps_text)
 {
-	var tps_json = JSON.parse(tps_text);
-
 	var data = this;
 
 	data.pages = [];
 	data.sites = {};
 
+	return data.importTpsTextPage(tps_text, 0);
+}
+
+/**
+ * @return {atlas.Data}
+ * @param {string} tps_text
+ * @param {number=} page_index
+ */
+atlas.Data.prototype.importTpsTextPage = function (tps_text, page_index)
+{
+	var data = this;
+
+	page_index = page_index || 0;
+
+	var tps_json = JSON.parse(tps_text);
+
 	if (tps_json.meta)
 	{
 		// TexturePacker only supports one page
-		var page = data.pages[0] = new atlas.Page();
+		var page = data.pages[page_index] = new atlas.Page();
 		page.w = tps_json.meta.size.w;
 		page.h = tps_json.meta.size.h;
 		page.name = tps_json.meta.image;
@@ -2767,7 +2814,7 @@ atlas.Data.prototype.importTPS = function (tps_text)
 	{
 		var frame = tps_json.frames[i];
 		var site = data.sites[i] = new atlas.Site();
-		site.page = 0;
+		site.page = page_index;
 		site.x = frame.frame.x;
 		site.y = frame.frame.y;
 		site.w = frame.frame.w;
