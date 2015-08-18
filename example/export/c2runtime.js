@@ -21070,9 +21070,11 @@ cr.plugins_.SpinePlugin = function(runtime)
 		if (!instance.extra.loading && instance.extra.render_ctx2d && instance.extra.spine_pose)
 		{
 			ctx.save();
-			ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2); ctx.scale(1, -1);
-			var tx = instance.x - (ctx.canvas.width/2);
-			var ty = (ctx.canvas.height/2) - instance.y;
+			var hw = instance.runtime.original_width/2;
+			var hh = instance.runtime.original_height/2;
+			ctx.translate(hw, hh); ctx.scale(1, -1);
+			var tx = instance.x - hw;
+			var ty = hh - instance.y;
 			var rz = -instance.angle;
 			var sx = 0.5 * instance.width / instance.extra.spine_pose.data.skeleton.width;
 			var sy = 0.5 * instance.height / instance.extra.spine_pose.data.skeleton.height;
@@ -21096,10 +21098,12 @@ cr.plugins_.SpinePlugin = function(runtime)
 			glw.endBatch();
 			var gl = instance.runtime.gl;
 			var gl_projection = instance.extra.render_webgl.gl_projection;
+			var hw = instance.runtime.original_width/2;
+			var hh = instance.runtime.original_height/2;
 			mat3x3Identity(gl_projection);
-			mat3x3Ortho(gl_projection, -gl.canvas.width/2, gl.canvas.width/2, -gl.canvas.height/2, gl.canvas.height/2);
-			var tx = instance.x - (gl.canvas.width/2);
-			var ty = (gl.canvas.height/2) - instance.y;
+			mat3x3Ortho(gl_projection, -hw, hw, -hh, hh);
+			var tx = instance.x - hw;
+			var ty = hh - instance.y;
 			var rz = -instance.angle;
 			var sx = 0.5 * instance.width / instance.extra.spine_pose.data.skeleton.width;
 			var sy = 0.5 * instance.height / instance.extra.spine_pose.data.skeleton.height;

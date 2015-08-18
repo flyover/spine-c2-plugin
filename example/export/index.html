@@ -2,49 +2,29 @@
 <html manifest="offline.appcache">
 <head>
     <meta charset="UTF-8" />
+	
+	<!-- This ensures the canvas works on IE9+.  Don't remove it! -->
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-	<title>New project</title>
 	
 	<!-- Standardised web app manifest -->
 	<link rel="manifest" href="appmanifest.json" />
 	
-	<!-- Allow fullscreen mode on iOS devices. (These are Apple specific meta tags.) -->
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, minimal-ui" />
-	<meta name="apple-mobile-web-app-capable" content="yes" />
-	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-	<link rel="apple-touch-icon" sizes="256x256" href="icon-256.png" />
-	<meta name="HandheldFriendly" content="true" />
+	<title>New project</title>
+	<!-- Note: running this exported project from disk may not work exactly like preview, since browsers block some features on the file:// protocol.  Once you've uploaded it to a server, it should work OK. -->
 	
-	<!-- Chrome for Android web app tags -->
-	<meta name="mobile-web-app-capable" content="yes" />
-	<link rel="shortcut icon" sizes="256x256" href="icon-256.png" />
-
-    <!-- All margins and padding must be zero for the canvas to fill the screen. -->
+    <!-- This outlines the canvas with a black border and makes the page background black. -->
 	<style type="text/css">
-		* {
-			padding: 0;
-			margin: 0;
-		}
-		html, body {
-			background: #000;
-			color: #fff;
-			overflow: hidden;
-			touch-action: none;
-			-ms-touch-action: none;
-		}
-		canvas {
-			touch-action-delay: none;
-			touch-action: none;
-			-ms-touch-action: none;
-		}
-    </style>
-	
+		body { background-color: black; color: white; }
+		canvas { -ms-touch-action: none; }
+	</style>
+
 
 </head> 
  
 <body> 
 	<div id="fb-root"></div>
-	
+	<div style="text-align: center;">
+
 	<script>
 	// Issue a warning if trying to preview an exported project on disk.
 	(function(){
@@ -55,24 +35,36 @@
 		}
 	})();
 	</script>
-	
-	<!-- The canvas must be inside a div called c2canvasdiv -->
-	<div id="c2canvasdiv">
-	
-		<!-- The canvas the project will render to.  If you change its ID, don't forget to change the
-		ID the runtime looks for in the jQuery events above (ready() and cr_sizeCanvas()). -->
-		<canvas id="c2canvas" width="854" height="480">
-			<!-- This text is displayed if the visitor's browser does not support HTML5.
-			You can change it, but it is a good idea to link to a description of a browser
-			and provide some links to download some popular HTML5-compatible browsers. -->
-			<h1>Your browser does not appear to support HTML5.  Try upgrading your browser to the latest version.  <a href="http://www.whatbrowser.org">What is a browser?</a>
-			<br/><br/><a href="http://www.microsoft.com/windows/internet-explorer/default.aspx">Microsoft Internet Explorer</a><br/>
-			<a href="http://www.mozilla.com/firefox/">Mozilla Firefox</a><br/>
-			<a href="http://www.google.com/chrome/">Google Chrome</a><br/>
-			<a href="http://www.apple.com/safari/download/">Apple Safari</a><br/>
-			<a href="http://www.google.com/chromeframe">Google Chrome Frame for Internet Explorer</a><br/></h1>
-		</canvas>
+
+		<!-- The canvas must be inside a div called c2canvasdiv -->
+		<div id="c2canvasdiv" style="margin: 0 auto; width: 854px; height: 480px;">
 		
+			<!-- The canvas the project will render to.  If you change its ID, don't forget to change the
+			ID the runtime looks for in the jQuery ready event (above). -->
+			<canvas id="c2canvas" width="854" height="480">
+				<!-- This text is displayed if the visitor's browser does not support HTML5.
+				You can change it, but it is a good idea to link to a description of a browser
+				and provide some links to download some popular HTML5-compatible browsers. -->
+				Your browser does not appear to support HTML5.  Try upgrading your browser to the latest version.  <a href="http://www.whatbrowser.org">What is a browser?</a>
+				<br/><br/><a href="http://www.microsoft.com/windows/internet-explorer/default.aspx">Microsoft Internet Explorer</a><br/>
+				<a href="http://www.mozilla.com/firefox/">Mozilla Firefox</a><br/>
+				<a href="http://www.google.com/chrome/">Google Chrome</a><br/>
+				<a href="http://www.apple.com/safari/download/">Apple Safari</a><br/>
+				<a href="http://www.google.com/chromeframe">Google Chrome Frame for Internet Explorer</a><br/>
+			</canvas>
+			
+		</div>
+
+        <br />
+		
+		<!-- SCIRRA LTD LICENSE AGREEMENT
+			 FREE EDITION USERS ARE NOT ALLOWED TO REMOVE, MODIFY OR HIDE THE FOLLOWING
+			 LINES OF HTML5 CODE FROM THEIR EXPORTED GAMES. REMOVAL, MODIFICATION OR
+			 ATTEMPTS TO HIDE THIS MESSAGE WILL BE IN BREACH OF THE FREE EDITION LICENSE
+		-->
+		<a href="http://www.scirra.com" target="_blank" style="font-family:Arial;color:DodgerBlue;" title="Build games">Make your own games with Construct 2, the HTML5 game creator</a>
+		<!-- End of Scirra Ltd. free edition limitation -->
+
 	</div>
 	
 	<!-- Pages load faster with scripts at the bottom -->
@@ -94,7 +86,7 @@
 		
 		// Start the Construct 2 project running on window load.
 		jQuery(document).ready(function ()
-		{			
+		{
 			// Create new runtime using the c2canvas
 			cr_createRuntime("c2canvas");
 		});
