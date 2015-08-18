@@ -548,6 +548,20 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 	// ... other expressions here ...
 
+	Exps.prototype.GetSkin = function (ret)
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		ret.set_string(spine_pose.skin_key);
+	}
+
+	Exps.prototype.GetAnim = function (ret)
+	{
+		var instance = this;
+		var spine_pose = instance.extra.spine_pose;
+		ret.set_string(spine_pose.anim_key);
+	}
+
 	Exps.prototype.GetTime = function (ret)
 	{
 		var instance = this;

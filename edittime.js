@@ -120,6 +120,10 @@ AddExpression(0, ef_return_number, "Leet expression", "My category", "MyExpressi
 
 var exp_id = 1;
 
+AddExpression(exp_id++, ef_return_string, "Get Skin", "Spine Expressions", "GetSkin", "Get the skin key.");
+
+AddExpression(exp_id++, ef_return_string, "Get Anim", "Spine Expressions", "GetAnim", "Get the animation key.");
+
 AddExpression(exp_id++, ef_return_number, "Get Time", "Spine Expressions", "GetTime", "Get the animation playback time.");
 
 AddExpression(exp_id++, ef_return_number, "Get Length", "Spine Expressions", "GetLength", "Get the animation playback length.");
