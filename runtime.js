@@ -72,7 +72,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 		if (ctx)
 		{
 			console.log("2D Context Enabled");
-			instance.render_ctx2d = new renderCtx2D(ctx);
+			instance.extra.render_ctx2d = new renderCtx2D(ctx);
 		}
 
 		var spine_url = instance.properties[0];
