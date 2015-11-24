@@ -1,4 +1,4 @@
-﻿// Scripts in this file are included in both the IDE and runtime, so you only
+// Scripts in this file are included in both the IDE and runtime, so you only
 // need to write scripts common to both once.
 
 CLOSURE_NO_DEPS = true;
@@ -3124,7 +3124,7 @@ spine.BezierCurve = function (x1, y1, x2, y2, epsilon)
 			x2 = curveX(t2) - x;
 			if (Math.abs(x2) < epsilon) return curveY(t2);
 			d2 = derivativeCurveX(t2);
-			if (Math.abs(d2) < 1e-6) break;
+			if (Math.abs(d2) < epsilon) break;
 			t2 = t2 - (x2 / d2);
 		}
 
@@ -4052,15 +4052,12 @@ spine.RegionAttachment = function ()
 {
 	goog.base(this, 'region');
 	this.local_space = new spine.Space();
-	this.world_space = new spine.Space();
 }
 
 goog.inherits(spine.RegionAttachment, spine.Attachment);
 
 /** @type {spine.Space} */
 spine.RegionAttachment.prototype.local_space;
-/** @type {spine.Space} */
-spine.RegionAttachment.prototype.world_space;
 /** @type {number} */
 spine.RegionAttachment.prototype.width = 0;
 /** @type {number} */
@@ -4076,7 +4073,6 @@ spine.RegionAttachment.prototype.load = function (json)
 
 	var attachment = this;
 	attachment.local_space.load(json);
-	attachment.world_space.copy(attachment.local_space);
 	attachment.width = spine.loadFloat(json, 'width', 0);
 	attachment.height = spine.loadFloat(json, 'height', 0);
 	return attachment;
@@ -6153,15 +6149,6 @@ spine.Pose.prototype.strike = function ()
 
 	pose.slot_keys = data.slot_keys;
 
-	pose.iterateAttachments(function (slot_key, slot, skin_slot, attachment_key, attachment)
-	{
-		if (!attachment) { return; }
-		if (attachment.type !== 'region') { return; }
-
-		var bone = pose.bones[slot.bone_key];
-		spine.Space.combine(bone.world_space, attachment.local_space, attachment.world_space);
-	});
-
 	if (anim)
 	{
 		var keyframe_index = spine.Keyframe.find(anim.order_keyframes, time);
@@ -6623,7 +6610,9 @@ renderCtx2D.prototype.drawPose = function (spine_pose, atlas_data)
 		switch (attachment.type)
 		{
 		case 'region':
-			ctxApplySpace(ctx, attachment.world_space);
+			var bone = spine_pose.bones[slot.bone_key];
+			ctxApplySpace(ctx, bone.world_space);
+			ctxApplySpace(ctx, attachment.local_space);
 			ctxApplyAtlasSitePosition(ctx, site);
 			ctx.scale(attachment.width/2, attachment.height/2);
 			ctxDrawImageMesh(ctx, render.region_vertex_triangle, render.region_vertex_position, render.region_vertex_texcoord, image, site, page);
@@ -6673,7 +6662,9 @@ renderCtx2D.prototype.drawDebugPose = function (spine_pose, atlas_data)
 		switch (attachment.type)
 		{
 		case 'region':
-			ctxApplySpace(ctx, attachment.world_space);
+			var bone = spine_pose.bones[slot.bone_key];
+			ctxApplySpace(ctx, bone.world_space);
+			ctxApplySpace(ctx, attachment.local_space);
 			ctxApplyAtlasSitePosition(ctx, site);
 			ctx.beginPath();
 			ctx.rect(-attachment.width/2, -attachment.height/2, attachment.width, attachment.height);
@@ -6748,7 +6739,9 @@ renderCtx2D.prototype.drawDebugData = function (spine_pose, atlas_data)
 		switch (attachment.type)
 		{
 		case 'region':
-			ctxApplySpace(ctx, attachment.world_space);
+			var bone = spine_pose.bones[slot.bone_key];
+			ctxApplySpace(ctx, bone.world_space);
+			ctxApplySpace(ctx, attachment.local_space);
 			ctxApplyAtlasSitePosition(ctx, site);
 			ctx.beginPath();
 			ctx.rect(-attachment.width/2, -attachment.height/2, attachment.width, attachment.height);
@@ -7510,7 +7503,9 @@ renderWebGL.prototype.drawPose = function (spine_pose, atlas_data)
 		switch (attachment.type)
 		{
 		case 'region':
-			mat3x3ApplySpace(gl_modelview, attachment.world_space);
+			var bone = spine_pose.bones[slot.bone_key];
+			mat3x3ApplySpace(gl_modelview, bone.world_space);
+			mat3x3ApplySpace(gl_modelview, attachment.local_space);
 			mat3x3Scale(gl_modelview, attachment.width/2, attachment.height/2);
 			mat3x3ApplyAtlasSitePosition(gl_modelview, site);
 
