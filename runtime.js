@@ -297,6 +297,8 @@ cr.plugins_.SpinePlugin = function(runtime)
 			ctx.scale(sx, sy);
 			ctx.lineWidth = 1 / Math.max(sx, sy);
 
+			ctx.globalAlpha = instance.opacity;
+
 			instance.extra.render_ctx2d.drawPose(instance.extra.spine_pose, instance.extra.atlas_data);
 
 			ctx.restore();
@@ -324,6 +326,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 			var gl = instance.runtime.gl;
 
 			var gl_projection = instance.extra.render_webgl.gl_projection;
+			var gl_color = instance.extra.render_webgl.gl_color;
 
 			var hw = instance.runtime.original_width/2;
 			var hh = instance.runtime.original_height/2;
@@ -340,6 +343,8 @@ cr.plugins_.SpinePlugin = function(runtime)
 			mat3x3Translate(gl_projection, tx, ty);
 			mat3x3Rotate(gl_projection, rz);
 			mat3x3Scale(gl_projection, sx, sy);
+
+			gl_color[3] = instance.opacity;
 
 			instance.extra.render_webgl.drawPose(instance.extra.spine_pose, instance.extra.atlas_data);
 
