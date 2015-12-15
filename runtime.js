@@ -328,21 +328,18 @@ cr.plugins_.SpinePlugin = function(runtime)
 			var gl_projection = instance.extra.render_webgl.gl_projection;
 			var gl_color = instance.extra.render_webgl.gl_color;
 
-			var hw = instance.runtime.original_width/2;
-			var hh = instance.runtime.original_height/2;
+			var flip_x = (this.width < 0)?(-1):(1);
+			var flip_y = (this.height < 0)?(-1):(1);
+			var tx = instance.x;
+			var ty = instance.y;
+			var rz = instance.angle * flip_x * flip_y;
+			var sx = 0.5 * Math.abs(instance.width) / instance.extra.spine_pose.data.skeleton.width;
+			var sy = 0.5 * Math.abs(instance.height) / instance.extra.spine_pose.data.skeleton.height;
 
-			mat3x3Identity(gl_projection);
-			mat3x3Ortho(gl_projection, -hw, hw, -hh, hh);
-
-			var tx = instance.x - hw;
-			var ty = hh - instance.y;
-			var rz = -instance.angle;
-			var sx = 0.5 * instance.width / instance.extra.spine_pose.data.skeleton.width;
-			var sy = 0.5 * instance.height / instance.extra.spine_pose.data.skeleton.height;
-
-			mat3x3Translate(gl_projection, tx, ty);
-			mat3x3Rotate(gl_projection, rz);
-			mat3x3Scale(gl_projection, sx, sy);
+			mat4.multiply(glw.matP, glw.matMV, gl_projection);
+			mat4x4Translate(gl_projection, tx, ty, 0.0);
+			mat4x4RotateZ(gl_projection, rz);
+			mat4x4Scale(gl_projection, sx, sy, 1.0);
 
 			gl_color[3] = instance.opacity;
 
