@@ -343,8 +343,8 @@ cr.plugins_.SpinePlugin = function(runtime)
 			var tx = instance.x;
 			var ty = instance.y;
 			var rz = instance.angle * flip_x * flip_y;
-			var sx = 0.5 * Math.abs(instance.width) / instance.extra.spine_pose.data.skeleton.width;
-			var sy = -0.5 * Math.abs(instance.height) / instance.extra.spine_pose.data.skeleton.height;
+			var sx = instance.width / instance.extra.spine_pose.data.skeleton.width;
+			var sy = -instance.height / instance.extra.spine_pose.data.skeleton.height;
 
 			mat4.multiply(glw.matP, glw.matMV, gl_projection);
 			mat4x4Translate(gl_projection, tx, ty, 0.0);

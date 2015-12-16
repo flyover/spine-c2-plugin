@@ -18,7 +18,7 @@
 						| pf_angle_aces			// compare/set/get angle (recommended that "rotatable" be set to true)
 						| pf_appearance_aces	// compare/set/get visible, opacity...
 					//	| pf_tiling				// adjusts image editor features to better suit tiled images (e.g. tiled background)
-					//	| pf_animations			// enables the animations system.  See 'Sprite' for usage
+						| pf_animations			// enables the animations system.  See 'Sprite' for usage
 						| pf_zorder_aces		// move to top, bottom, layer...
 					//  | pf_nosize				// prevent resizing in the editor
 					//	| pf_effects			// allow WebGL shader effects to be added
@@ -187,16 +187,30 @@ function IDEInstance(instance, type)
 
 	// Plugin-specific variables
 	// this.myValue = 0...
+	this.just_inserted = false;
+	this.texture_loaded = false;
+	this.last_imgsize = new cr.vector2(0, 0);
+	this.last_texture = null;
+	this.last_texture_id = "";
+}
+
+IDEInstance.prototype.OnAfterLoad = function ()
+{
+	// Must initialise last_imgsize for correct updating of sprites on layouts without a tab open
+	var texture = this.instance.GetTexture(this.properties["Initial frame"], this.properties["Initial animation"]);
+	this.last_imgsize = texture.GetImageSize();
 }
 
 // Called when inserted via Insert Object Dialog for the first time
 IDEInstance.prototype.OnInserted = function()
 {
+	this.just_inserted = true;
 }
 
 // Called when double clicked in layout
 IDEInstance.prototype.OnDoubleClicked = function()
 {
+	this.instance.EditTexture();
 }
 
 // Called after a property has been changed in the properties bar
@@ -207,27 +221,113 @@ IDEInstance.prototype.OnPropertyChanged = function(property_name)
 // For rendered objects to load fonts or textures
 IDEInstance.prototype.OnRendererInit = function(renderer)
 {
+	this.last_texture = this.instance.GetTexture(this.properties["Initial frame"], this.properties["Initial animation"]);
+	this.last_texture_id = this.last_texture.GetID();
+	
+	renderer.LoadTexture(this.last_texture);
+	this.texture_loaded = true;
+	
+	this.instance.SetHotspot(this.last_texture.GetHotspot());
 }
 
 // Called to draw self in the editor if a layout object
 IDEInstance.prototype.Draw = function(renderer)
 {
-	var q = this.instance.GetBoundingQuad();
-	var tl = new cr.vector2(q.tlx, q.tly);
-	var tr = new cr.vector2(q.trx, q.try_);
-	var br = new cr.vector2(q.brx, q.bry);
-	var bl = new cr.vector2(q.blx, q.bly);
-	var c = cr.RGB(0, 0, 255);
-	renderer.Line(tl, tr, c);
-	renderer.Line(tr, br, c);
-	renderer.Line(br, bl, c);
-	renderer.Line(bl, tl, c);
-	var c = cr.RGB(255, 0, 0);
-	renderer.Line(tl, br, c);
-	renderer.Line(bl, tr, c);
+	var texture = this.instance.GetTexture(this.properties["Initial frame"], this.properties["Initial animation"]);
+	var texture_id = texture.GetID();
+	
+	if (this.last_texture_id !== "" && this.last_texture_id !== texture_id)
+	{
+		// Texture has changed: unload old and reload new.
+		if (this.last_texture)
+			renderer.ReleaseTexture(this.last_texture);
+			
+		renderer.LoadTexture(texture);
+		this.instance.SetHotspot(texture.GetHotspot());
+	}
+	
+	this.last_texture = texture;
+	this.last_texture_id = texture_id;
+	
+	renderer.SetTexture(texture);
+	
+	var imgsize = texture.GetImageSize();
+	
+	// First draw after insert: use size of texture.
+	// Done after SetTexture so the file is loaded and dimensions known, preventing
+	// the file being loaded twice.
+	if (this.just_inserted)
+	{
+		this.just_inserted = false;
+		this.instance.SetSize(imgsize);
+		
+		RefreshPropertyGrid();		// show new size
+	}
+	// If not just inserted and the sprite texture has been edited and changed size, scale the texture accordingly.
+	else if ((imgsize.x !== this.last_imgsize.x || imgsize.y !== this.last_imgsize.y)
+		&& (this.last_imgsize.x !== 0 && this.last_imgsize.y !== 0))
+	{
+		var sz = new cr.vector2(imgsize.x / this.last_imgsize.x, imgsize.y / this.last_imgsize.y);
+		var instsize = this.instance.GetSize();
+		
+		sz.mul(instsize.x, instsize.y);
+		this.instance.SetSize(sz);
+		this.instance.SetHotspot(texture.GetHotspot());
+		
+		RefreshPropertyGrid();		// show new size
+	}
+
+	this.last_imgsize = imgsize;
+	
+	if (renderer.SupportsFullSmoothEdges())
+	{
+		// Get the object size and texture size
+		var objsize = this.instance.GetSize();
+		var texsize = texture.GetImageSize();
+		
+		// Calculate pixels per texel, then get a quad padded with a texel padding
+		var pxtex = new cr.vector2(objsize.x / texsize.x, objsize.y / texsize.y);
+		var q = this.instance.GetBoundingQuad(new cr.vector2(pxtex.x, pxtex.y));
+		
+		// Calculate the size of a texel in texture coordinates, then calculate texture coordinates
+		// for the texel padded quad
+		var tex = new cr.vector2(1.0 / texsize.x, 1.0 / texsize.y);
+		var uv = new cr.rect(-tex.x, -tex.y, 1.0 + tex.x, 1.0 + tex.y);
+		
+		// Render a quad with a half-texel padding for smooth edges
+		renderer.Quad(q, this.instance.GetOpacity(), uv);
+	}
+	else
+	{
+		// Fall back to half-smoothed or jagged edges, depending on what the renderer supports
+		renderer.Quad(this.instance.GetBoundingQuad(), this.instance.GetOpacity());
+	}
 }
 
 // For rendered objects to release fonts or textures
 IDEInstance.prototype.OnRendererReleased = function(renderer)
 {
+	this.texture_loaded = false;
+	renderer.ReleaseTexture(this.last_texture);
+}
+
+IDEInstance.prototype.OnTextureEdited = function ()
+{
+	var texture = this.instance.GetTexture(this.properties["Initial frame"], this.properties["Initial animation"]);
+	this.instance.SetHotspot(texture.GetHotspot());
+	
+	var imgsize = texture.GetImageSize();
+	
+	// If sprite texture has been edited and changed size, scale the texture accordingly.
+	if ((imgsize.x !== this.last_imgsize.x || imgsize.y !== this.last_imgsize.y)
+		&& (this.last_imgsize.x !== 0 && this.last_imgsize.y !== 0))
+	{
+		var sz = new cr.vector2(imgsize.x / this.last_imgsize.x, imgsize.y / this.last_imgsize.y);
+		var instsize = this.instance.GetSize();
+		
+		sz.mul(instsize.x, instsize.y);
+		this.instance.SetSize(sz);
+		
+		this.last_imgsize = imgsize;
+	}
 }
