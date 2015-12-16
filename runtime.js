@@ -122,7 +122,17 @@ cr.plugins_.SpinePlugin = function(runtime)
 					{
 						if (instance.extra.render_webgl)
 						{
+							var gl = instance.runtime.gl;
+							var prev_texture = gl.getParameter(gl.TEXTURE_BINDING_2D);
+							var prev_array_buffer = gl.getParameter(gl.ARRAY_BUFFER_BINDING);
+							var prev_element_array_buffer = gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING);
+							var prev_unpack_premultiply_alpha = gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
+							gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
 							instance.extra.render_webgl.loadPose(instance.extra.spine_pose, instance.extra.atlas_data, images);
+							gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, prev_unpack_premultiply_alpha);
+							gl.bindTexture(gl.TEXTURE_2D, prev_texture);
+							gl.bindBuffer(gl.ARRAY_BUFFER, prev_array_buffer);
+							gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, prev_element_array_buffer);
 						}
 						if (instance.extra.render_ctx2d)
 						{
