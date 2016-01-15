@@ -2778,7 +2778,7 @@ atlas.Data.prototype.exportAtlasTextLines = function (lines)
 		else if (page.wrap_t === 'Repeat') { repeat = 'y'; }
 		lines.push("repeat: " + repeat);
 
-		for (var site_key in data.sites)
+		Object.keys(data.sites).forEach(function (site_key)
 		{
 			var site = data.sites[site_key];
 			if (site.page !== page) { continue; }
@@ -2789,7 +2789,7 @@ atlas.Data.prototype.exportAtlasTextLines = function (lines)
 			lines.push("  orig: " + site.original_w + ", " + site.original_h);
 			lines.push("  offset: " + site.offset_x + ", " + site.offset_y);
 			lines.push("  index: " + site.index);
-		}
+		});
 	});
 
 	return lines;
@@ -2822,20 +2822,21 @@ atlas.Data.prototype.importTpsTextPage = function (tps_text, page_index)
 
 	var tps_json = JSON.parse(tps_text);
 
+	var page = data.pages[page_index] = new atlas.Page();
+
 	if (tps_json.meta)
 	{
 		// TexturePacker only supports one page
-		var page = data.pages[page_index] = new atlas.Page();
 		page.w = tps_json.meta.size.w;
 		page.h = tps_json.meta.size.h;
 		page.name = tps_json.meta.image;
 	}
 
-	if (tps_json.frames) for (var i in tps_json.frames)
+	Object.keys(tps_json.frames).forEach(function (key)
 	{
-		var frame = tps_json.frames[i];
-		var site = data.sites[i] = new atlas.Site();
-		site.page = page_index;
+		var frame = tps_json.frames[key];
+		var site = data.sites[key] = new atlas.Site();
+		site.page = page;
 		site.x = frame.frame.x;
 		site.y = frame.frame.y;
 		site.w = frame.frame.w;
@@ -2845,7 +2846,7 @@ atlas.Data.prototype.importTpsTextPage = function (tps_text, page_index)
 		site.offset_y = (frame.spriteSourceSize && frame.spriteSourceSize.y) || 0;
 		site.original_w = (frame.sourceSize && frame.sourceSize.w) || site.w;
 		site.original_h = (frame.sourceSize && frame.sourceSize.h) || site.h;
-	}
+	});
 
 	return data;
 }
@@ -6418,12 +6419,6 @@ renderCtx2D = function (ctx)
 renderCtx2D.prototype.dropPose = function (spine_pose, atlas_data)
 {
 	var render = this;
-
-	for (var image_key in render.images)
-	{
-		delete render.images[image_key];
-	}
-
 	render.images = {};
 	render.skin_info_map = {};
 }
@@ -7192,31 +7187,31 @@ renderWebGL.prototype.dropPose = function (spine_pose, atlas_data)
 	var gl = render.gl;
 	if (!gl) { return; }
 
-	for (var image_key in render.gl_textures)
+	Object.keys(render.gl_textures).forEach(function (image_key)
 	{
 		var gl_texture = render.gl_textures[image_key];
 		gl.deleteTexture(gl_texture); gl_texture = null;
 		delete render.gl_textures[image_key];
-	}
+	});
 
 	render.gl_textures = {};
 
-	for (var bone_key in render.bone_info_map)
+	Object.keys(render.bone_info_map).forEach(function (bone_key)
 	{
 		var bone_info = render.bone_info_map[bone_key];
-	}
+	});
 
 	render.bone_info_map = {};
 
-	for (var skin_key in render.skin_info_map)
+	Object.keys(render.skin_info_map).forEach(function (skin_key)
 	{
 		var skin_info = render.skin_info_map[skin_key];
 		var slot_info_map = skin_info.slot_info_map;
-		for (var slot_key in slot_info_map)
+		Object.keys(slot_info_map).forEach(function (slot_key)
 		{
 			var slot_info = slot_info_map[slot_key];
 			var attachment_info_map = slot_info.attachment_info_map;
-			for (var attachment_key in attachment_info_map)
+			Object.keys(attachment_info_map).forEach(function (attachment_key)
 			{
 				var attachment_info = attachment_info_map[attachment_key];
 
@@ -7227,14 +7222,14 @@ renderWebGL.prototype.dropPose = function (spine_pose, atlas_data)
 					gl.deleteBuffer(gl_vertex.position.buffer);
 					gl.deleteBuffer(gl_vertex.texcoord.buffer);
 					gl.deleteBuffer(gl_vertex.triangle.buffer);
-					for (var anim_key in attachment_info.anim_ffd_attachments)
+					Object.keys(attachment_info.anim_ffd_attachments).forEach(function (anim_key)
 					{
 						var anim_ffd_attachment = attachment_info.anim_ffd_attachments[anim_key];
 						anim_ffd_attachment.ffd_keyframes.forEach(function (ffd_keyframe)
 						{
 							gl.deleteBuffer(ffd_keyframe.gl_vertex.buffer);
 						});
-					}
+					});
 					break;
 				case 'skinnedmesh':
 					var gl_vertex = attachment_info.gl_vertex;
@@ -7242,22 +7237,22 @@ renderWebGL.prototype.dropPose = function (spine_pose, atlas_data)
 					gl.deleteBuffer(gl_vertex.blenders.buffer);
 					gl.deleteBuffer(gl_vertex.texcoord.buffer);
 					gl.deleteBuffer(gl_vertex.triangle.buffer);
-					for (var anim_key in attachment_info.anim_ffd_attachments)
+					Object.keys(attachment_info.anim_ffd_attachments).forEach(function (anim_key)
 					{
 						var anim_ffd_attachment = attachment_info.anim_ffd_attachments[anim_key];
 						anim_ffd_attachment.ffd_keyframes.forEach(function (ffd_keyframe)
 						{
 							gl.deleteBuffer(ffd_keyframe.gl_vertex.buffer);
 						});
-					}
+					});
 					break;
 				default:
 					console.log("TODO", skin_key, slot_key, attachment_key, attachment_info.type);
 					break;
 				}
-			}
-		}
-	}
+			});
+		});
+	});
 
 	render.skin_info_map = {};
 }
