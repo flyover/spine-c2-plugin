@@ -4282,10 +4282,14 @@ spine.SkinSlot = function ()
 {
 	var skin_slot = this;
 	skin_slot.attachments = {};
+	skin_slot.attachment_keys = [];
 }
 
 /** @type {Object.<string,spine.Attachment>} */
 spine.SkinSlot.prototype.attachments;
+
+/** @type {Array.<string>} */
+spine.SkinSlot.prototype.attachment_keys;
 
 /**
  * @return {spine.SkinSlot}
@@ -4294,7 +4298,8 @@ spine.SkinSlot.prototype.attachments;
 spine.SkinSlot.prototype.load = function (json)
 {
 	var skin_slot = this;
-	for (var attachment_key in json)
+	skin_slot.attachment_keys = Object.keys(json);
+	skin_slot.attachment_keys.forEach(function (attachment_key)
 	{
 		var json_attachment = json[attachment_key];
 		switch (json_attachment.type)
@@ -4313,7 +4318,7 @@ spine.SkinSlot.prototype.load = function (json)
 			skin_slot.attachments[attachment_key] = new spine.SkinnedMeshAttachment().load(json_attachment);
 			break;
 		}
-	}
+	});
 	return skin_slot;
 }
 
@@ -4324,10 +4329,17 @@ spine.Skin = function ()
 {
 	var skin = this;
 	skin.slots = {};
+	skin.slot_keys = [];
 }
+
+/** @type {string} */
+spine.Skin.prototype.name = "";
 
 /** @type {Object.<string,spine.SkinSlot>} */
 spine.Skin.prototype.slots;
+
+/** @type {Array.<string>} */
+spine.Skin.prototype.slot_keys;
 
 /**
  * @return {spine.Skin}
@@ -4336,10 +4348,12 @@ spine.Skin.prototype.slots;
 spine.Skin.prototype.load = function (json)
 {
 	var skin = this;
-	for (var slot_key in json)
+	skin.name = spine.loadString(json, 'name', "");
+	skin.slot_keys = Object.keys(json);
+	skin.slot_keys.forEach(function (slot_key)
 	{
 		skin.slots[slot_key] = new spine.SkinSlot().load(json[slot_key]);
-	}
+	});
 	return skin;
 }
 
@@ -4350,15 +4364,15 @@ spine.Skin.prototype.load = function (json)
 spine.Skin.prototype.iterateAttachments = function (callback)
 {
 	var skin = this;
-	for (var slot_key in skin.slots)
+	skin.slot_keys.forEach(function (slot_key)
 	{
 		var skin_slot = skin.slots[slot_key];
-		for (var attachment_key in skin_slot.attachments)
+		skin_slot.attachment_keys.forEach(function (attachment_key)
 		{
 			var attachment = skin_slot.attachments[attachment_key];
 			callback(slot_key, skin_slot, attachment.path || attachment.name || attachment_key, attachment);
-		}
-	}
+		});
+	});
 }
 
 /**
@@ -4679,7 +4693,7 @@ spine.AnimBone.prototype.load = function (json)
 	anim_bone.flip_x_keyframes = null;
 	anim_bone.flip_y_keyframes = null;
 
-	for (var key in json)
+	Object.keys(json).forEach(function (key)
 	{
 		switch (key)
 		{
@@ -4742,7 +4756,7 @@ spine.AnimBone.prototype.load = function (json)
 			console.log("TODO: spine.AnimBone::load", key);
 			break;
 		}
-	}
+	});
 
 	return anim_bone;
 }
@@ -4853,7 +4867,7 @@ spine.AnimSlot.prototype.load = function (json)
 	anim_slot.color_keyframes = null;
 	anim_slot.attachment_keyframes = null;
 
-	for (var key in json)
+	Object.keys(json).forEach(function (key)
 	{
 		switch (key)
 		{
@@ -4872,7 +4886,6 @@ spine.AnimSlot.prototype.load = function (json)
 			anim_slot.attachment_keyframes = [];
 			json[key].forEach(function (attachment)
 			{
-				;
 				var attachment_keyframe = new spine.AttachmentKeyframe().load(attachment);
 				anim_slot.min_time = Math.min(anim_slot.min_time, attachment_keyframe.time);
 				anim_slot.max_time = Math.max(anim_slot.max_time, attachment_keyframe.time);
@@ -4884,7 +4897,7 @@ spine.AnimSlot.prototype.load = function (json)
 			console.log("TODO: spine.AnimSlot::load", key);
 			break;
 		}
-	}
+	})
 
 	return anim_slot;
 }
@@ -4981,7 +4994,7 @@ spine.OrderKeyframe.prototype.load = function (json)
 	var order_keyframe = this;
 	order_keyframe.slot_offsets = [];
 
-	for (var key in json)
+	Object.keys(json).forEach(function (key)
 	{
 		switch (key)
 		{
@@ -4992,7 +5005,7 @@ spine.OrderKeyframe.prototype.load = function (json)
 			});
 			break;
 		}
-	}
+	});
 	return order_keyframe;
 }
 
@@ -5150,10 +5163,14 @@ spine.FfdSlot = function ()
 {
 	var ffd_slot = this;
 	ffd_slot.ffd_attachments = {};
+	ffd_slot.ffd_attachment_keys = [];
 }
 
 /** @type {Object.<string,spine.FfdAttachment>} */
 spine.FfdSlot.prototype.ffd_attachments;
+
+/** @type {Array.<string>} */
+spine.FfdSlot.prototype.ffd_attachment_keys;
 
 /**
  * @return {spine.FfdSlot}
@@ -5164,11 +5181,11 @@ spine.FfdSlot.prototype.load = function (json)
 	var ffd_slot = this;
 
 	ffd_slot.ffd_attachments = {};
-
-	for (var key in json)
+	ffd_slot.ffd_attachment_keys = Object.keys(json);
+	ffd_slot.ffd_attachment_keys.forEach(function (key)
 	{
 		ffd_slot.ffd_attachments[key] = new spine.FfdAttachment().load(json[key]);
-	}
+	});
 
 	return ffd_slot;
 }
@@ -5181,12 +5198,12 @@ spine.FfdSlot.prototype.iterateAttachments = function (callback)
 {
 	var ffd_slot = this;
 
-	for (var ffd_attachment_key in ffd_slot.ffd_attachments)
+	ffd_slot.ffd_attachment_keys.forEach(function (ffd_attachment_key)
 	{
 		var ffd_attachment = ffd_slot.ffd_attachments[ffd_attachment_key];
 
 		callback(ffd_attachment_key, ffd_attachment);
-	}
+	});
 }
 
 /**
@@ -5204,6 +5221,8 @@ spine.AnimFfd.prototype.min_time = 0;
 spine.AnimFfd.prototype.max_time = 0;
 /** @type {Object.<string,spine.FfdSlot>} */
 spine.AnimFfd.prototype.ffd_slots;
+/** @type {Array.<string>} */
+spine.AnimFfd.prototype.ffd_slot_keys;
 
 /**
  * @return {spine.AnimFfd}
@@ -5216,11 +5235,11 @@ spine.AnimFfd.prototype.load = function (json)
 	anim_ffd.min_time = 0;
 	anim_ffd.max_time = 0;
 	anim_ffd.ffd_slots = {};
-
-	for (var key in json)
+	anim_ffd.ffd_slot_keys = Object.keys(json);
+	anim_ffd.ffd_slot_keys.forEach(function (key)
 	{
 		anim_ffd.ffd_slots[key] = new spine.FfdSlot().load(json[key]);
-	}
+	});
 
 	anim_ffd.iterateAttachments(function (ffd_slot_key, ffd_slot, ffd_attachment_key, ffd_attachment)
 	{
@@ -5239,7 +5258,7 @@ spine.AnimFfd.prototype.iterateAttachments = function (callback)
 {
 	var anim_ffd = this;
 
-	for (var ffd_slot_key in anim_ffd.ffd_slots)
+	anim_ffd.ffd_slot_keys.forEach(function (ffd_slot_key)
 	{
 		var ffd_slot = anim_ffd.ffd_slots[ffd_slot_key];
 
@@ -5247,7 +5266,7 @@ spine.AnimFfd.prototype.iterateAttachments = function (callback)
 		{
 			callback(ffd_slot_key, ffd_slot, ffd_attachment_key, ffd_attachment);
 		});
-	}
+	});
 }
 
 /**
@@ -5303,27 +5322,27 @@ spine.Animation.prototype.load = function (json)
 	anim.min_time = 0;
 	anim.max_time = 0;
 
-	for (var key in json)
+	Object.keys(json).forEach(function (key)
 	{
 		switch (key)
 		{
 		case 'bones':
-			for (var bone_key in json[key])
+			Object.keys(json[key]).forEach(function (bone_key)
 			{
 				var anim_bone = new spine.AnimBone().load(json[key][bone_key]);
 				anim.min_time = Math.min(anim.min_time, anim_bone.min_time);
 				anim.max_time = Math.max(anim.max_time, anim_bone.max_time);
 				anim.bones[bone_key] = anim_bone;
-			}
+			});
 			break;
 		case 'slots':
-			for (var slot_key in json[key])
+			Object.keys(json[key]).forEach(function (slot_key)
 			{
 				var anim_slot = new spine.AnimSlot().load(json[key][slot_key]);
 				anim.min_time = Math.min(anim.min_time, anim_slot.min_time);
 				anim.max_time = Math.max(anim.max_time, anim_slot.max_time);
 				anim.slots[slot_key] = anim_slot;
-			}
+			});
 			break;
 		case 'events':
 			anim.event_keyframes = [];
@@ -5349,28 +5368,28 @@ spine.Animation.prototype.load = function (json)
 			anim.order_keyframes = anim.order_keyframes.sort(spine.Keyframe.compare);
 			break;
 		case 'ik':
-			for (var ikc_key in json[key])
+			Object.keys(json[key]).forEach(function (ikc_key)
 			{
 				var anim_ikc = new spine.AnimIkc().load(json[key][ikc_key]);
 				anim.min_time = Math.min(anim.min_time, anim_ikc.min_time);
 				anim.max_time = Math.max(anim.max_time, anim_ikc.max_time);
 				anim.ikcs[ikc_key] = anim_ikc;
-			}
+			});
 			break;
 		case 'ffd':
-			for (var ffd_key in json[key])
+			Object.keys(json[key]).forEach(function (ffd_key)
 			{
 				var anim_ffd = new spine.AnimFfd().load(json[key][ffd_key]);
 				anim.min_time = Math.min(anim.min_time, anim_ffd.min_time);
 				anim.max_time = Math.max(anim.max_time, anim_ffd.max_time);
 				anim.ffds[ffd_key] = anim_ffd;
-			}
+			});
 			break;
 		default:
 			console.log("TODO: spine.Animation::load", key);
 			break;
 		}
-	}
+	});
 
 	anim.length = anim.max_time - anim.min_time;
 
@@ -5484,7 +5503,7 @@ spine.Data.prototype.load = function (json)
 	data.anims = {};
 	data.anim_keys = [];
 
-	for (var key in json)
+	Object.keys(json).forEach(function (key)
 	{
 		switch (key)
 		{
@@ -5517,35 +5536,36 @@ spine.Data.prototype.load = function (json)
 			break;
 		case 'skins':
 			var json_skins = json[key];
-			for (var skin_key in json_skins)
+			data.skin_keys = Object.keys(json_skins);
+			data.skin_keys.forEach(function (skin_key)
 			{
 				var skin = data.skins[skin_key] = new spine.Skin().load(json_skins[skin_key]);
-				data.skin_keys.push(skin_key);
-			}
+				skin.name = skin.name || skin_key;
+			});
 			break;
 		case 'events':
 			var json_events = json[key];
-			for (var event_key in json_events)
+			data.event_keys = Object.keys(json_events);
+			data.event_keys.forEach(function (event_key)
 			{
 				var event = data.events[event_key] = new spine.Event().load(json_events[event_key]);
 				event.name = event.name || event_key;
-				data.event_keys.push(event_key);
-			}
+			});
 			break;
 		case 'animations':
 			var json_animations = json[key];
-			for (var anim_key in json_animations)
+			data.anim_keys = Object.keys(json_animations);
+			data.anim_keys.forEach(function (anim_key)
 			{
 				var anim = data.anims[anim_key] = new spine.Animation().load(json_animations[anim_key]);
 				anim.name = anim.name || anim_key;
-				data.anim_keys.push(anim_key);
-			}
+			});
 			break;
 		default:
 			console.log("TODO: spine.Skeleton::load", key);
 			break;
 		}
-	}
+	});
 
 	data.iterateBones(function (bone_key, bone)
 	{
@@ -5657,11 +5677,11 @@ spine.Data.prototype.iterateAttachments = function (skin_key, callback)
 spine.Data.prototype.iterateSkins = function (callback)
 {
 	var data = this;
-	for (var skin_key in data.skins)
+	data.skin_keys.forEach(function (skin_key)
 	{
 		var skin = data.skins[skin_key];
 		callback(skin_key, skin);
-	}
+	});
 }
 
 /**
@@ -5671,11 +5691,11 @@ spine.Data.prototype.iterateSkins = function (callback)
 spine.Data.prototype.iterateEvents = function (callback)
 {
 	var data = this;
-	for (var event_key in data.events)
+	data.event_keys.forEach(function (event_key)
 	{
 		var event = data.events[event_key];
 		callback(event_key, event);
-	}
+	});
 }
 
 /**
@@ -5685,11 +5705,11 @@ spine.Data.prototype.iterateEvents = function (callback)
 spine.Data.prototype.iterateAnims = function (callback)
 {
 	var data = this;
-	for (var anim_key in data.anims)
+	data.anim_keys.forEach(function (anim_key)
 	{
 		var anim = data.anims[anim_key];
 		callback(anim_key, anim);
-	}
+	});
 }
 
 /**
