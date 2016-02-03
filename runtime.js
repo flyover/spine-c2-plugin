@@ -65,14 +65,14 @@ cr.plugins_.SpinePlugin = function(runtime)
 		{
 			console.log("WebGL Enabled");
 			console.log(gl.getParameter(gl.VERSION));
-			instance.extra.render_webgl = new renderWebGL(gl);
+			instance.extra.render_webgl = new RenderWebGL(gl);
 		}
 
 		var ctx = this.runtime.ctx;
 		if (ctx)
 		{
 			console.log("2D Context Enabled");
-			instance.extra.render_ctx2d = new renderCtx2D(ctx);
+			instance.extra.render_ctx2d = new RenderCtx2D(ctx);
 		}
 
 		var spine_url = instance.properties[0];
