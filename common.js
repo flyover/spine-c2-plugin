@@ -6224,13 +6224,13 @@ Object.defineProperty(spine.Pose.prototype, 'tweened_events', {
     return this.events;
   }
 });
-goog.provide('renderCtx2D');
+goog.provide('RenderCtx2D');
 
 /**
  * @constructor
  * @param {CanvasRenderingContext2D} ctx
  */
-renderCtx2D = function(ctx) {
+RenderCtx2D = function(ctx) {
   var render = this;
   render.ctx = ctx;
   render.images = {};
@@ -6245,7 +6245,7 @@ renderCtx2D = function(ctx) {
  * @param {spine.Pose} spine_pose
  * @param {atlas.Data} atlas_data
  */
-renderCtx2D.prototype.dropPose = function(spine_pose, atlas_data) {
+RenderCtx2D.prototype.dropPose = function(spine_pose, atlas_data) {
   var render = this;
   render.images = {};
   render.skin_info_map = {};
@@ -6257,7 +6257,7 @@ renderCtx2D.prototype.dropPose = function(spine_pose, atlas_data) {
  * @param {atlas.Data} atlas_data
  * @param {Object.<string,HTMLImageElement>} images
  */
-renderCtx2D.prototype.loadPose = function(spine_pose, atlas_data, images) {
+RenderCtx2D.prototype.loadPose = function(spine_pose, atlas_data, images) {
   var render = this;
 
   spine_pose.data.iterateSkins(function(skin_key, skin) {
@@ -6324,7 +6324,7 @@ renderCtx2D.prototype.loadPose = function(spine_pose, atlas_data, images) {
  * @param {spine.Pose} spine_pose
  * @param {atlas.Data} atlas_data
  */
-renderCtx2D.prototype.updatePose = function(spine_pose, atlas_data) {
+RenderCtx2D.prototype.updatePose = function(spine_pose, atlas_data) {
   var render = this;
 
   spine_pose.iterateAttachments(function(slot_key, slot, skin_slot, attachment_key, attachment) {
@@ -6449,7 +6449,7 @@ renderCtx2D.prototype.updatePose = function(spine_pose, atlas_data) {
  * @param {spine.Pose} spine_pose
  * @param {atlas.Data} atlas_data
  */
-renderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
+RenderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
   var render = this;
   var ctx = render.ctx;
 
@@ -6531,7 +6531,7 @@ renderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
  * @param {spine.Pose} spine_pose
  * @param {atlas.Data} atlas_data
  */
-renderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
+RenderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
   var render = this;
   var ctx = render.ctx;
 
@@ -6613,7 +6613,7 @@ renderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
  * @param {spine.Pose} spine_pose
  * @param {atlas.Data} atlas_data
  */
-renderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
+RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
   var render = this;
   var ctx = render.ctx;
 
@@ -6870,13 +6870,13 @@ function ctxDrawIkConstraints(ctx, data, bones) {
     }
   });
 }
-goog.provide('renderWebGL');
+goog.provide('RenderWebGL');
 
 /**
  * @constructor
  * @param {WebGLRenderingContext} gl
  */
-renderWebGL = function(gl) {
+RenderWebGL = function(gl) {
   var render = this;
   render.gl = gl;
   if (!gl) {
@@ -7003,7 +7003,7 @@ renderWebGL = function(gl) {
  * @param {spine.Pose} spine_pose
  * @param {atlas.Data} atlas_data
  */
-renderWebGL.prototype.dropPose = function(spine_pose, atlas_data) {
+RenderWebGL.prototype.dropPose = function(spine_pose, atlas_data) {
   var render = this;
   var gl = render.gl;
   if (!gl) {
@@ -7077,7 +7077,7 @@ renderWebGL.prototype.dropPose = function(spine_pose, atlas_data) {
  * @param {atlas.Data} atlas_data
  * @param {Object.<string,HTMLImageElement>} images
  */
-renderWebGL.prototype.loadPose = function(spine_pose, atlas_data, images) {
+RenderWebGL.prototype.loadPose = function(spine_pose, atlas_data, images) {
   var render = this;
   var gl = render.gl;
   if (!gl) {
@@ -7356,7 +7356,7 @@ renderWebGL.prototype.loadPose = function(spine_pose, atlas_data, images) {
  * @param {spine.Pose} spine_pose
  * @param {atlas.Data} atlas_data
  */
-renderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
+RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
   var render = this;
   var gl = render.gl;
   if (!gl) {
