@@ -1,7 +1,7 @@
 // Scripts in this file are included in both the IDE and runtime, so you only
 // need to write scripts common to both once.
 
-CLOSURE_NO_DEPS = true;
+var CLOSURE_NO_DEPS = true;
 
 // Copyright 2006 The Closure Library Authors. All Rights Reserved.
 //
