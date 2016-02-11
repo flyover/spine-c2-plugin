@@ -85,6 +85,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 		console.log("Anim Key", anim_key);
 
 		instance.extra.loading = true;
+		instance.extra.spine_data = null;
 		instance.extra.spine_pose = null;
 		instance.extra.atlas_data = null;
 
@@ -96,18 +97,19 @@ cr.plugins_.SpinePlugin = function(runtime)
 				return;
 			}
 
-			instance.extra.spine_pose = new spine.Pose(new spine.Data().load(JSON.parse(text)));
+			instance.extra.spine_data = new spine.Data().load(JSON.parse(text))
+			instance.extra.spine_pose = new spine.Pose(instance.extra.spine_data);
 
-			console.log("Spine Data Version", instance.extra.spine_pose.data.skeleton.spine);
+			console.log("Spine Data Version", instance.extra.spine_data.skeleton.spine);
 
-			//instance.width = instance.extra.spine_pose.data.skeleton.width || instance.width;
-			//instance.height = instance.extra.spine_pose.data.skeleton.height || instance.height;
+			//instance.width = instance.extra.spine_data.skeleton.width || instance.width;
+			//instance.height = instance.extra.spine_data.skeleton.height || instance.height;
 			//instance.set_bbox_changed();
 
-			console.log("Skin Keys", instance.extra.spine_pose.data.skin_keys);
+			console.log("Skin Keys", instance.extra.spine_data.skin_keys);
 			instance.extra.spine_pose.setSkin(skin_key);
 
-			console.log("Anim Keys", instance.extra.spine_pose.data.anim_keys);
+			console.log("Anim Keys", instance.extra.spine_data.anim_keys);
 			instance.extra.spine_pose.setAnim(anim_key);
 
 			loadText(atlas_url, function (err, text)
@@ -128,7 +130,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 							var prev_element_array_buffer = gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING);
 							var prev_unpack_premultiply_alpha = gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
 							gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-							instance.extra.render_webgl.loadPose(instance.extra.spine_pose, instance.extra.atlas_data, images);
+							instance.extra.render_webgl.loadData(instance.extra.spine_data, instance.extra.atlas_data, images);
 							gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, prev_unpack_premultiply_alpha);
 							gl.bindTexture(gl.TEXTURE_2D, prev_texture);
 							gl.bindBuffer(gl.ARRAY_BUFFER, prev_array_buffer);
@@ -136,7 +138,7 @@ cr.plugins_.SpinePlugin = function(runtime)
 						}
 						if (instance.extra.render_ctx2d)
 						{
-							instance.extra.render_ctx2d.loadPose(instance.extra.spine_pose, instance.extra.atlas_data, images);
+							instance.extra.render_ctx2d.loadData(instance.extra.spine_data, instance.extra.atlas_data, images);
 						}
 
 						instance.runtime.redraw = true;
@@ -205,9 +207,9 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 		if (instance.extra.render_webgl)
 		{
-			if (instance.extra.spine_pose)
+			if (instance.extra.spine_data)
 			{
-				instance.extra.render_webgl.dropPose(instance.extra.spine_pose, instance.extra.atlas_data);
+				instance.extra.render_webgl.dropData(instance.extra.spine_data, instance.extra.atlas_data);
 			}
 
 			instance.extra.render_webgl = null;
@@ -215,9 +217,9 @@ cr.plugins_.SpinePlugin = function(runtime)
 
 		if (instance.extra.render_ctx2d)
 		{
-			if (instance.extra.spine_pose)
+			if (instance.extra.spine_data)
 			{
-				instance.extra.render_ctx2d.dropPose(instance.extra.spine_pose, instance.extra.atlas_data);
+				instance.extra.render_ctx2d.dropData(instance.extra.spine_data, instance.extra.atlas_data);
 			}
 
 			instance.extra.render_ctx2d = null;
@@ -226,6 +228,11 @@ cr.plugins_.SpinePlugin = function(runtime)
 		if (instance.extra.spine_pose)
 		{
 			instance.extra.spine_pose = null;
+		}
+
+		if (instance.extra.spine_data)
+		{
+			instance.extra.spine_data = null;
 		}
 
 		if (instance.extra.atlas_data)
@@ -299,8 +306,8 @@ cr.plugins_.SpinePlugin = function(runtime)
 			var tx = instance.x - hw;
 			var ty = hh - instance.y;
 			var rz = -instance.angle;
-			var sx = 0.5 * instance.width / instance.extra.spine_pose.data.skeleton.width;
-			var sy = 0.5 * instance.height / instance.extra.spine_pose.data.skeleton.height;
+			var sx = 0.5 * instance.width / instance.extra.spine_data.skeleton.width;
+			var sy = 0.5 * instance.height / instance.extra.spine_data.skeleton.height;
 
 			ctx.translate(tx, ty);
 			ctx.rotate(rz);
@@ -343,8 +350,8 @@ cr.plugins_.SpinePlugin = function(runtime)
 			var tx = instance.x;
 			var ty = instance.y;
 			var rz = instance.angle * flip_x * flip_y;
-			var sx = instance.width / instance.extra.spine_pose.data.skeleton.width;
-			var sy = -instance.height / instance.extra.spine_pose.data.skeleton.height;
+			var sx = instance.width / instance.extra.spine_data.skeleton.width;
+			var sy = -instance.height / instance.extra.spine_data.skeleton.height;
 
 			mat4.multiply(glw.matP, glw.matMV, gl_projection);
 			mat4x4Translate(gl_projection, tx, ty, 0.0);
@@ -460,27 +467,29 @@ cr.plugins_.SpinePlugin = function(runtime)
 	Acts.prototype.SetPrevSkin = function ()
 	{
 		var instance = this;
+		var spine_data = instance.extra.spine_data;
 		var spine_pose = instance.extra.spine_pose;
-		var skin_index = spine_pose.data.skin_keys.indexOf(spine_pose.skin_key);
+		var skin_index = spine_data.skin_keys.indexOf(spine_pose.skin_key);
 		if (skin_index <= 0)
 		{
-			skin_index = spine_pose.data.skin_keys.length;
+			skin_index = spine_data.skin_keys.length;
 		}
 		--skin_index;
-		instance.extra.spine_pose.setSkin(spine_pose.data.skin_keys[skin_index]);
+		instance.extra.spine_pose.setSkin(spine_data.skin_keys[skin_index]);
 	}
 
 	Acts.prototype.SetNextSkin = function ()
 	{
 		var instance = this;
+		var spine_data = instance.extra.spine_data;
 		var spine_pose = instance.extra.spine_pose;
-		var skin_index = spine_pose.data.skin_keys.indexOf(spine_pose.skin_key);
+		var skin_index = spine_data.skin_keys.indexOf(spine_pose.skin_key);
 		++skin_index;
-		if (skin_index >= spine_pose.data.skin_keys.length)
+		if (skin_index >= spine_data.skin_keys.length)
 		{
 			skin_index = 0;
 		}
-		instance.extra.spine_pose.setSkin(spine_pose.data.skin_keys[skin_index]);
+		instance.extra.spine_pose.setSkin(spine_data.skin_keys[skin_index]);
 	}
 
 	Acts.prototype.SetAnim = function (anim_key)
@@ -496,28 +505,30 @@ cr.plugins_.SpinePlugin = function(runtime)
 	Acts.prototype.SetPrevAnim = function ()
 	{
 		var instance = this;
+		var spine_data = instance.extra.spine_data;
 		var spine_pose = instance.extra.spine_pose;
-		var anim_index = spine_pose.data.anim_keys.indexOf(spine_pose.anim_key);
+		var anim_index = spine_data.anim_keys.indexOf(spine_pose.anim_key);
 		if (anim_index <= 0)
 		{
-			anim_index = spine_pose.data.anim_keys.length;
+			anim_index = spine_data.anim_keys.length;
 		}
 		--anim_index;
-		instance.extra.spine_pose.setAnim(spine_pose.data.anim_keys[anim_index]);
+		instance.extra.spine_pose.setAnim(spine_data.anim_keys[anim_index]);
 		instance.extra.loop_count = 0;
 	}
 
 	Acts.prototype.SetNextAnim = function ()
 	{
 		var instance = this;
+		var spine_data = instance.extra.spine_data;
 		var spine_pose = instance.extra.spine_pose;
-		var anim_index = spine_pose.data.anim_keys.indexOf(spine_pose.anim_key);
+		var anim_index = spine_data.anim_keys.indexOf(spine_pose.anim_key);
 		++anim_index;
-		if (anim_index >= spine_pose.data.anim_keys.length)
+		if (anim_index >= spine_data.anim_keys.length)
 		{
 			anim_index = 0;
 		}
-		instance.extra.spine_pose.setAnim(spine_pose.data.anim_keys[anim_index]);
+		instance.extra.spine_pose.setAnim(spine_data.anim_keys[anim_index]);
 		instance.extra.loop_count = 0;
 	}
 
