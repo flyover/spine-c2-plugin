@@ -1,5 +1,5 @@
 {
-"skeleton": { "hash": "/hfqYqpMRBLVq5KIZ1lbWGI+h/o", "spine": "2.1.27", "width": 1223.7, "height": 1052.38, "images": "./images/" },
+"skeleton": { "hash": "0zd+6ZsiWjtfX5qEXztRGdU37Vs", "spine": "2.1.27", "width": 1223.7, "height": 1052.38, "images": "./images/" },
 "bones": [
 	{ "name": "root" },
 	{ "name": "front_foot_goal", "parent": "root", "x": -45.79, "y": -28.67, "rotation": -0.94, "color": "ff0000ff" },
@@ -488,6 +488,9 @@
 			"visor": { "x": 99.13, "y": 6.51, "rotation": -70.57, "width": 261, "height": 168 }
 		}
 	}
+},
+"events": {
+	"sound": {}
 },
 "animations": {
 	"Jump": {
@@ -2624,7 +2627,11 @@
 					]
 				}
 			}
-		}
+		},
+		"events": [
+			{ "time": 0.5, "name": "sound", "string": "footstep\n" },
+			{ "time": 1.0333, "name": "sound", "string": "footstep" }
+		]
 	}
 }
 }
