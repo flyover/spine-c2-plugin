@@ -4069,8 +4069,8 @@ spine.MeshAttachment.prototype.load = function(json) {
  * @constructor
  * @extends {spine.Attachment}
  */
-spine.SkinnedMeshAttachment = function() {
-  goog.base(this, 'skinnedmesh');
+spine.WeightedMeshAttachment = function() {
+  goog.base(this, 'weightedmesh');
   this.color = new spine.Color();
   this.triangles = [];
   this.edges = [];
@@ -4078,43 +4078,43 @@ spine.SkinnedMeshAttachment = function() {
   this.uvs = [];
 }
 
-goog.inherits(spine.SkinnedMeshAttachment, spine.Attachment);
+goog.inherits(spine.WeightedMeshAttachment, spine.Attachment);
 
 /**
  * @type {spine.Color}
  */
-spine.SkinnedMeshAttachment.prototype.color;
+spine.WeightedMeshAttachment.prototype.color;
 
 /**
  * @type {Array.<number>}
  */
-spine.SkinnedMeshAttachment.prototype.triangles;
+spine.WeightedMeshAttachment.prototype.triangles;
 
 /**
  * @type {Array.<number>}
  */
-spine.SkinnedMeshAttachment.prototype.edges;
+spine.WeightedMeshAttachment.prototype.edges;
 
 /**
  * @type {Array.<number>}
  */
-spine.SkinnedMeshAttachment.prototype.vertices;
+spine.WeightedMeshAttachment.prototype.vertices;
 
 /**
  * @type {Array.<number>}
  */
-spine.SkinnedMeshAttachment.prototype.uvs;
+spine.WeightedMeshAttachment.prototype.uvs;
 
 /**
  * @type {number}
  */
-spine.SkinnedMeshAttachment.prototype.hull = 0;
+spine.WeightedMeshAttachment.prototype.hull = 0;
 
 /**
  * @return {spine.Attachment}
  * @param {Object.<string,?>} json
  */
-spine.SkinnedMeshAttachment.prototype.load = function(json) {
+spine.WeightedMeshAttachment.prototype.load = function(json) {
   goog.base(this, 'load', json);
 
   var attachment = this;
@@ -4163,7 +4163,9 @@ spine.SkinSlot.prototype.load = function(json) {
         skin_slot.attachments[attachment_key] = new spine.MeshAttachment().load(json_attachment);
         break;
       case 'skinnedmesh':
-        skin_slot.attachments[attachment_key] = new spine.SkinnedMeshAttachment().load(json_attachment);
+        json_attachment.type = 'weightedmesh';
+      case 'weightedmesh':
+        skin_slot.attachments[attachment_key] = new spine.WeightedMeshAttachment().load(json_attachment);
         break;
     }
   });
@@ -5204,6 +5206,32 @@ spine.Data.prototype.load = function(json) {
         json_ik.forEach(function(ikc, ikc_index) {
           data.ikcs[ikc.name] = new spine.Ikc().load(ikc);
           data.ikc_keys[ikc_index] = ikc.name;
+        });
+        // sort by ancestry
+        data.ikc_keys = data.ikc_keys.sort(function(a, b) {
+          var ikc_a = data.ikcs[a];
+          var ikc_b = data.ikcs[b];
+          for (var ia = 0; ia < ikc_a.bone_keys.length; ++ia) {
+            var bone_a = data.bones[ikc_a.bone_keys[ia]];
+            for (var ib = 0; ib < ikc_b.bone_keys.length; ++ib) {
+              var bone_b = data.bones[ikc_b.bone_keys[ib]];
+              var bone_a_parent = data.bones[bone_a.parent_key];
+              while (bone_a_parent) {
+                if (bone_a_parent === bone_b) {
+                  return 1;
+                }
+                bone_a_parent = data.bones[bone_a_parent.parent_key];
+              }
+              var bone_b_parent = data.bones[bone_b.parent_key];
+              while (bone_b_parent) {
+                if (bone_b_parent === bone_a) {
+                  return -1;
+                }
+                bone_b_parent = data.bones[bone_b_parent.parent_key];
+              }
+            }
+          }
+          return 0;
         });
         break;
       case 'slots':
@@ -6280,7 +6308,7 @@ RenderCtx2D.prototype.loadData = function(spine_data, atlas_data, images) {
           var vertex_texcoord = attachment_info.vertex_texcoord = new Float32Array(attachment.uvs);
           var vertex_triangle = attachment_info.vertex_triangle = new Uint16Array(attachment.triangles);
           break;
-        case 'skinnedmesh':
+        case 'weightedmesh':
           var slot_info = slot_info_map[slot_key] = slot_info_map[slot_key] || {};
           var attachment_info_map = slot_info.attachment_info_map = slot_info.attachment_info_map || {};
           var attachment_info = attachment_info_map[attachment_key] = {};
@@ -6362,7 +6390,7 @@ RenderCtx2D.prototype.updatePose = function(spine_pose, atlas_data) {
           }
         }
         break;
-      case 'skinnedmesh':
+      case 'weightedmesh':
         var skin_info = render.skin_info_map[spine_pose.skin_key],
           default_skin_info = render.skin_info_map['default'];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
@@ -6512,7 +6540,7 @@ RenderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
         ctxApplyAtlasSitePosition(ctx, site);
         ctxDrawImageMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, attachment_info.vertex_texcoord, image, site, page);
         break;
-      case 'skinnedmesh':
+      case 'weightedmesh':
         var skin_info = render.skin_info_map[spine_pose.skin_key],
           default_skin_info = render.skin_info_map['default'];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
@@ -6585,7 +6613,7 @@ RenderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
         ctxApplyAtlasSitePosition(ctx, site);
         ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, 'rgba(127,127,127,1.0)', 'rgba(127,127,127,0.25)');
         break;
-      case 'skinnedmesh':
+      case 'weightedmesh':
         var skin_info = render.skin_info_map[spine_pose.skin_key],
           default_skin_info = render.skin_info_map['default'];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
@@ -6628,7 +6656,7 @@ RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
 
     switch (attachment.type) {
       case 'region':
-        var bone = spine_pose.bones[slot.bone_key];
+        var bone = spine_pose.data.bones[slot.bone_key];
         ctxApplySpace(ctx, bone.world_space);
         ctxApplySpace(ctx, attachment.local_space);
         ctxApplyAtlasSitePosition(ctx, site);
@@ -6665,7 +6693,7 @@ RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
         ctxApplyAtlasSitePosition(ctx, site);
         ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, 'rgba(127,127,127,1.0)', 'rgba(127,127,127,0.25)');
         break;
-      case 'skinnedmesh':
+      case 'weightedmesh':
         var skin_info = render.skin_info_map[spine_pose.skin_key],
           default_skin_info = render.skin_info_map['default'];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
@@ -7047,7 +7075,7 @@ RenderWebGL.prototype.dropData = function(spine_data, atlas_data) {
               });
             });
             break;
-          case 'skinnedmesh':
+          case 'weightedmesh':
             var gl_vertex = attachment_info.gl_vertex;
             gl.deleteBuffer(gl_vertex.position.buffer);
             gl.deleteBuffer(gl_vertex.blenders.buffer);
@@ -7129,7 +7157,7 @@ RenderWebGL.prototype.loadData = function(spine_data, atlas_data, images) {
             }
           });
           break;
-        case 'skinnedmesh':
+        case 'weightedmesh':
           var slot_info = slot_info_map[slot_key] = slot_info_map[slot_key] || {};
           var attachment_info_map = slot_info.attachment_info_map = slot_info.attachment_info_map || {};
           var attachment_info = attachment_info_map[attachment_key] = {};
@@ -7334,7 +7362,7 @@ RenderWebGL.prototype.loadData = function(spine_data, atlas_data, images) {
         switch (attachment.type) {
           case 'region':
           case 'mesh':
-          case 'skinnedmesh':
+          case 'weightedmesh':
             var image_key = attachment_key;
             var image = images[image_key];
             var gl_texture = render.gl_textures[image_key] = gl.createTexture();
@@ -7543,7 +7571,7 @@ RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
           gl.useProgram(null);
         }
         break;
-      case 'skinnedmesh':
+      case 'weightedmesh':
         var skin_info = render.skin_info_map[spine_pose.skin_key],
           default_skin_info = render.skin_info_map['default'];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
