@@ -4498,6 +4498,7 @@ spine.Ikc.prototype.load = function(json) {
  */
 spine.Xfc = function() {
   var xfc = this;
+  xfc.bone_keys = [];
   xfc.position = new spine.Position();
   xfc.rotation = new spine.Rotation();
   xfc.scale = new spine.Scale();
@@ -4506,8 +4507,8 @@ spine.Xfc = function() {
 
 /** @type {string} */
 spine.Xfc.prototype.name = "";
-/** @type {string} */
-spine.Xfc.prototype.bone_key = "";
+/** @type {Array.<string>} */
+spine.Xfc.prototype.bone_keys;
 /** @type {string} */
 spine.Xfc.prototype.target_key = "";
 /** @type {number} */
@@ -4534,7 +4535,7 @@ spine.Xfc.prototype.shear;
 spine.Xfc.prototype.load = function(json) {
   var xfc = this;
   xfc.name = spine.loadString(json, 'name', "");
-  xfc.bone_key = spine.loadString(json, 'bone', "");
+  xfc.bone_keys = json['bones'] || [];
   xfc.target_key = spine.loadString(json, 'target', "");
   xfc.position_mix = spine.loadFloat(json, 'translateMix', 1);
   xfc.position.x = spine.loadFloat(json, 'x', 0);
@@ -4548,6 +4549,58 @@ spine.Xfc.prototype.load = function(json) {
   xfc.shear.x.deg = spine.loadFloat(json, 'shearX', 0);
   xfc.shear.y.deg = spine.loadFloat(json, 'shearY', 0);
   return xfc;
+}
+
+/**
+ * @constructor
+ */
+spine.Ptc = function() {
+  var ptc = this;
+  ptc.bone_keys = [];
+  ptc.rotation = new spine.Rotation();
+}
+
+/** @type {string} */
+spine.Ptc.prototype.name = "";
+/** @type {Array.<string>} */
+spine.Ptc.prototype.bone_keys;
+/** @type {string} */
+spine.Ptc.prototype.target_key = "";
+/** @type {string} */
+spine.Ptc.prototype.spacing_mode = "length"; // "length", "fixed", "percent"
+/** @type {number} */
+spine.Ptc.prototype.spacing = 0;
+/** @type {string} */
+spine.Ptc.prototype.position_mode = "percent"; // "fixed", "percent"
+/** @type {number} */
+spine.Ptc.prototype.position_mix = 1;
+/** @type {number} */
+spine.Ptc.prototype.position = 0;
+/** @type {string} */
+spine.Ptc.prototype.rotation_mode = "tangent"; // "tangent", "chain", "chainScale"
+/** @type {number} */
+spine.Ptc.prototype.rotation_mix = 1;
+/** @type {spine.Rotation} */
+spine.Ptc.prototype.rotation;
+
+/**
+ * @return {spine.Ptc}
+ * @param {Object.<string,?>} json
+ */
+spine.Ptc.prototype.load = function(json) {
+  var ptc = this;
+  ptc.name = spine.loadString(json, 'name', "");
+  ptc.bone_keys = json['bones'] || [];
+  ptc.target_key = spine.loadString(json, 'target', "");
+  ptc.spacing_mode = spine.loadString(json, 'spacingMode', "length");
+  ptc.spacing = spine.loadFloat(json, 'spacing', 0);
+  ptc.position_mode = spine.loadString(json, 'positionMode', "percent");
+  ptc.position_mix = spine.loadFloat(json, 'translateMix', 1);
+  ptc.position = spine.loadFloat(json, 'position', 0);
+  ptc.rotation_mode = spine.loadString(json, 'rotateMode', "tangent");
+  ptc.rotation_mix = spine.loadFloat(json, 'rotateMix', 1);
+  ptc.rotation.deg = spine.loadFloat(json, 'rotation', 0);
+  return ptc;
 }
 
 /**
@@ -4602,7 +4655,7 @@ spine.Attachment = function(type) {
 }
 
 /** @type {string} */
-spine.Attachment.prototype.type = "region";
+spine.Attachment.prototype.type = "";
 /** @type {string} */
 spine.Attachment.prototype.name = "";
 /** @type {string} */
@@ -4858,6 +4911,47 @@ spine.WeightedLinkedMeshAttachment.prototype.load = function(json) {
 
 /**
  * @constructor
+ * @extends {spine.Attachment}
+ */
+spine.PathAttachment = function() {
+  goog.base(this, 'path');
+  this.color = new spine.Color();
+}
+
+goog.inherits(spine.PathAttachment, spine.Attachment);
+
+/** @type {spine.Color} */
+spine.PathAttachment.prototype.color;
+/** @type {boolean} */
+spine.PathAttachment.prototype.closed = false;
+/** @type {boolean} */
+spine.PathAttachment.prototype.accurate = true;
+/** @type {Array.<number>} */
+spine.PathAttachment.prototype.lengths;
+/** @type {number} */
+spine.PathAttachment.prototype.vertex_count = 0;
+/** @type {Array.<number>} */
+spine.PathAttachment.prototype.vertices;
+
+/**
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
+ */
+spine.PathAttachment.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+
+  var attachment = this;
+  attachment.color.load(json.color);
+  attachment.closed = spine.loadBool(json, 'closed', false);
+  attachment.accurate = spine.loadBool(json, 'constantSpeed', true);
+  attachment.lengths = json.lengths || [];
+  attachment.vertex_count = spine.loadInt(json, 'vertexCount', 0);
+  attachment.vertices = json.vertices || [];
+  return attachment;
+}
+
+/**
+ * @constructor
  */
 spine.SkinSlot = function() {
   var skin_slot = this;
@@ -4888,10 +4982,20 @@ spine.SkinSlot.prototype.load = function(json) {
         skin_slot.attachments[attachment_key] = new spine.BoundingBoxAttachment().load(json_attachment);
         break;
       case 'mesh':
-        skin_slot.attachments[attachment_key] = new spine.MeshAttachment().load(json_attachment);
+        if (json_attachment.vertices.length === json_attachment.uvs.length) {
+          skin_slot.attachments[attachment_key] = new spine.MeshAttachment().load(json_attachment);
+        } else {
+          json_attachment.type = 'weightedmesh';
+          skin_slot.attachments[attachment_key] = new spine.WeightedMeshAttachment().load(json_attachment);
+        }
         break;
       case 'linkedmesh':
-        skin_slot.attachments[attachment_key] = new spine.LinkedMeshAttachment().load(json_attachment);
+        if (json_attachment.vertices.length === json_attachment.uvs.length) {
+          skin_slot.attachments[attachment_key] = new spine.LinkedMeshAttachment().load(json_attachment);
+        } else {
+          json_attachment.type = 'weightedlinkedmesh';
+          skin_slot.attachments[attachment_key] = new spine.WeightedLinkedMeshAttachment().load(json_attachment);
+        }
         break;
       case 'skinnedmesh':
         json_attachment.type = 'weightedmesh';
@@ -4900,6 +5004,9 @@ spine.SkinSlot.prototype.load = function(json) {
         break;
       case 'weightedlinkedmesh':
         skin_slot.attachments[attachment_key] = new spine.WeightedLinkedMeshAttachment().load(json_attachment);
+        break;
+      case 'path':
+        skin_slot.attachments[attachment_key] = new spine.PathAttachment().load(json_attachment);
         break;
     }
   });
@@ -5638,6 +5745,171 @@ spine.AnimXfc.prototype.load = function(json) {
  * @constructor
  * @extends {spine.Keyframe}
  */
+spine.PtcKeyframe = function() {
+  goog.base(this);
+  this.curve = new spine.Curve();
+}
+
+goog.inherits(spine.PtcKeyframe, spine.Keyframe);
+
+/** @type {spine.Curve} */
+spine.PtcKeyframe.prototype.curve;
+
+/**
+ * @return {spine.PtcKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.curve.load(json.curve);
+  return this;
+}
+
+/**
+ * @constructor
+ * @extends {spine.PtcKeyframe}
+ */
+spine.PtcSpacingKeyframe = function() {
+  goog.base(this);
+}
+
+goog.inherits(spine.PtcSpacingKeyframe, spine.PtcKeyframe);
+
+/** @type {number} */
+spine.PtcSpacingKeyframe.prototype.spacing = 0;
+
+/**
+ * @return {spine.PtcSpacingKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcSpacingKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.spacing = spine.loadFloat(json, 'spacing', 0);
+  return this;
+}
+
+/**
+ * @constructor
+ * @extends {spine.PtcKeyframe}
+ */
+spine.PtcPositionKeyframe = function() {
+  goog.base(this);
+}
+
+goog.inherits(spine.PtcPositionKeyframe, spine.PtcKeyframe);
+
+/** @type {number} */
+spine.PtcPositionKeyframe.prototype.position_mix = 1;
+/** @type {number} */
+spine.PtcPositionKeyframe.prototype.position = 0;
+
+/**
+ * @return {spine.PtcPositionKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcPositionKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.position_mix = spine.loadFloat(json, 'positionMix', 1);
+  this.position = spine.loadFloat(json, 'position', 0);
+  return this;
+}
+
+/**
+ * @constructor
+ * @extends {spine.PtcKeyframe}
+ */
+spine.PtcRotationKeyframe = function() {
+  goog.base(this);
+}
+
+goog.inherits(spine.PtcRotationKeyframe, spine.PtcKeyframe);
+
+/** @type {number} */
+spine.PtcRotationKeyframe.prototype.rotation_mix = 1;
+/** @type {number} */
+spine.PtcRotationKeyframe.prototype.rotation = 0;
+
+/**
+ * @return {spine.PtcRotationKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcRotationKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.rotation_mix = spine.loadFloat(json, 'rotationMix', 1);
+  this.rotation = spine.loadFloat(json, 'rotation', 0);
+  return this;
+}
+
+/**
+ * @constructor
+ */
+spine.AnimPtc = function() {}
+
+/** @type {number} */
+spine.AnimPtc.prototype.min_time = 0;
+/** @type {number} */
+spine.AnimPtc.prototype.max_time = 0;
+/** @type {Array.<spine.PtcSpacingKeyframe>} */
+spine.AnimPtc.prototype.ptc_spacing_keyframes = null;
+/** @type {Array.<spine.PtcPositionKeyframe>} */
+spine.AnimPtc.prototype.ptc_position_keyframes = null;
+/** @type {Array.<spine.PtcRotationKeyframe>} */
+spine.AnimPtc.prototype.ptc_rotation_keyframes = null;
+
+/**
+ * @return {spine.AnimPtc}
+ * @param {Object.<string,?>} json
+ */
+spine.AnimPtc.prototype.load = function(json) {
+  var anim_ptc = this;
+  anim_ptc.min_time = 0;
+  anim_ptc.max_time = 0;
+  anim_ptc.ptc_spacing_keyframes = [];
+  anim_ptc.ptc_position_keyframes = [];
+  anim_ptc.ptc_rotation_keyframes = [];
+
+  Object.keys(json || {}).forEach(function(key) {
+    switch (key) {
+      case 'spacing':
+        json[key].forEach(function(spacing_json) {
+          var ptc_spacing_keyframe = new spine.PtcSpacingKeyframe().load(spacing_json);
+          anim_ptc.min_time = Math.min(anim_ptc.min_time, ptc_spacing_keyframe.time);
+          anim_ptc.max_time = Math.max(anim_ptc.max_time, ptc_spacing_keyframe.time);
+          anim_ptc.ptc_spacing_keyframes.push(ptc_spacing_keyframe);
+        });
+        anim_ptc.ptc_spacing_keyframes.sort(spine.Keyframe.compare);
+        break;
+      case 'position':
+        json[key].forEach(function(position_json) {
+          var ptc_position_keyframe = new spine.PtcPositionKeyframe().load(position_json);
+          anim_ptc.min_time = Math.min(anim_ptc.min_time, ptc_position_keyframe.time);
+          anim_ptc.max_time = Math.max(anim_ptc.max_time, ptc_position_keyframe.time);
+          anim_ptc.ptc_position_keyframes.push(ptc_position_keyframe);
+        });
+        anim_ptc.ptc_position_keyframes.sort(spine.Keyframe.compare);
+        break;
+      case 'rotation':
+        json[key].forEach(function(rotation_json) {
+          var ptc_rotation_keyframe = new spine.PtcRotationKeyframe().load(rotation_json);
+          anim_ptc.min_time = Math.min(anim_ptc.min_time, ptc_rotation_keyframe.time);
+          anim_ptc.max_time = Math.max(anim_ptc.max_time, ptc_rotation_keyframe.time);
+          anim_ptc.ptc_rotation_keyframes.push(ptc_rotation_keyframe);
+        });
+        anim_ptc.ptc_rotation_keyframes.sort(spine.Keyframe.compare);
+        break;
+      default:
+        console.log("TODO: spine.AnimPtc::load", key);
+        break;
+    }
+  });
+
+  return anim_ptc;
+}
+
+/**
+ * @constructor
+ * @extends {spine.Keyframe}
+ */
 spine.FfdKeyframe = function() {
   goog.base(this);
   this.curve = new spine.Curve();
@@ -5809,6 +6081,7 @@ spine.Animation = function() {
   anim.slots = {};
   anim.ikcs = {};
   anim.xfcs = {};
+  anim.ptcs = {};
   anim.ffds = {};
 }
 
@@ -5826,6 +6099,8 @@ spine.Animation.prototype.order_keyframes = null;
 spine.Animation.prototype.ikcs;
 /** @type {Object.<string,spine.AnimXfc>} */
 spine.Animation.prototype.xfcs;
+/** @type {Object.<string,spine.AnimPtc>} */
+spine.Animation.prototype.ptcs;
 /** @type {Object.<string,spine.AnimFfd>} */
 spine.Animation.prototype.ffds;
 /** @type {number} */
@@ -5848,6 +6123,7 @@ spine.Animation.prototype.load = function(json) {
   anim.order_keyframes = null;
   anim.ikcs = {};
   anim.xfcs = {};
+  anim.ptcs = {};
   anim.ffds = {};
 
   anim.min_time = 0;
@@ -5908,7 +6184,16 @@ spine.Animation.prototype.load = function(json) {
           anim.xfcs[xfc_key] = anim_xfc;
         });
         break;
+      case 'paths':
+        Object.keys(json[key] || {}).forEach(function(ptc_key) {
+          var anim_ptc = new spine.AnimPtc().load(json[key][ptc_key]);
+          anim.min_time = Math.min(anim.min_time, anim_ptc.min_time);
+          anim.max_time = Math.max(anim.max_time, anim_ptc.max_time);
+          anim.ptcs[ptc_key] = anim_ptc;
+        });
+        break;
       case 'ffd':
+      case 'deform':
         Object.keys(json[key] || {}).forEach(function(ffd_key) {
           var anim_ffd = new spine.AnimFfd().load(json[key][ffd_key]);
           anim.min_time = Math.min(anim.min_time, anim_ffd.min_time);
@@ -5971,6 +6256,8 @@ spine.Data = function() {
   data.ikc_keys = [];
   data.xfcs = {};
   data.xfc_keys = [];
+  data.ptcs = {};
+  data.ptc_keys = [];
   data.slots = {};
   data.slot_keys = [];
   data.skins = {};
@@ -5997,6 +6284,10 @@ spine.Data.prototype.ikc_keys;
 spine.Data.prototype.xfcs;
 /** @type {Array.<string>} */
 spine.Data.prototype.xfc_keys;
+/** @type {Object.<string,spine.Ptc>} */
+spine.Data.prototype.ptcs;
+/** @type {Array.<string>} */
+spine.Data.prototype.ptc_keys;
 /** @type {Object.<string,spine.Slot>} */
 spine.Data.prototype.slots;
 /** @type {Array.<string>} */
@@ -6027,6 +6318,8 @@ spine.Data.prototype.load = function(json) {
   data.ikc_keys = [];
   data.xfcs = {};
   data.xfc_keys = [];
+  data.ptcs = {};
+  data.ptc_keys = [];
   data.slots = {};
   data.slot_keys = [];
   data.skins = {};
@@ -6088,6 +6381,38 @@ spine.Data.prototype.load = function(json) {
           data.xfc_keys[xfc_index] = xfc.name;
         });
         // TODO: sort by ancestry?
+        data.xfc_keys = data.xfc_keys.sort(function(a, b) {
+          var xfc_a = data.xfcs[a];
+          var xfc_b = data.xfcs[b];
+          for (var ia = 0; ia < xfc_a.bone_keys.length; ++ia) {
+            var bone_a = data.bones[xfc_a.bone_keys[ia]];
+            for (var ib = 0; ib < xfc_b.bone_keys.length; ++ib) {
+              var bone_b = data.bones[xfc_b.bone_keys[ib]];
+              var bone_a_parent = data.bones[bone_a.parent_key];
+              while (bone_a_parent) {
+                if (bone_a_parent === bone_b) {
+                  return 1;
+                }
+                bone_a_parent = data.bones[bone_a_parent.parent_key];
+              }
+              var bone_b_parent = data.bones[bone_b.parent_key];
+              while (bone_b_parent) {
+                if (bone_b_parent === bone_a) {
+                  return -1;
+                }
+                bone_b_parent = data.bones[bone_b_parent.parent_key];
+              }
+            }
+          }
+          return 0;
+        });
+        break;
+      case 'path':
+        var json_path = json[key];
+        json_path.forEach(function(ptc, ptc_index) {
+          data.ptcs[ptc.name] = new spine.Ptc().load(ptc);
+          data.ptc_keys[ptc_index] = ptc.name;
+        });
         break;
       case 'slots':
         var json_slots = json[key];
@@ -6474,6 +6799,8 @@ spine.Pose.prototype.strike = function() {
   var keyframe_index;
   var pct;
 
+  // bones
+
   data.bone_keys.forEach(function(bone_key) {
     var data_bone = data.bones[bone_key];
     var pose_bone = pose.bones[bone_key] || (pose.bones[bone_key] = new spine.Bone());
@@ -6729,16 +7056,20 @@ spine.Pose.prototype.strike = function() {
       }
     }
 
-    var xfc_bone = pose.bones[xfc.bone_key];
     var xfc_target = pose.bones[xfc.target_key];
     var xfc_position = xfc.position;
     var xfc_rotation = xfc.rotation;
     var xfc_scale = xfc.scale;
     var xfc_shear = xfc.shear;
     var xfc_world_position = spine.Space.transform(xfc_target.world_space, xfc_position, new spine.Vector());
-    xfc_bone.world_space.position.tween(xfc_world_position, xfc_position_mix, xfc_bone.world_space.position);
-    // TODO: rotation, scale, shear
+    xfc.bone_keys.forEach(function(bone_key) {
+      var xfc_bone = pose.bones[bone_key];
+      // TODO
+      xfc_bone.world_space.position.tween(xfc_world_position, xfc_position_mix, xfc_bone.world_space.position);
+    });
   });
+
+  // slots
 
   data.slot_keys.forEach(function(slot_key) {
     var data_slot = data.slots[slot_key];
@@ -6789,6 +7120,77 @@ spine.Pose.prototype.strike = function() {
       });
     }
   }
+
+  // path constraints
+
+  data.ptc_keys.forEach(function(ptc_key) {
+    var ptc = data.ptcs[ptc_key];
+    var ptc_spacing_mode = ptc.spacing_mode;
+    var ptc_spacing = ptc.spacing;
+    var ptc_position_mode = ptc.position_mode;
+    var ptc_position_mix = ptc.position_mix;
+    var ptc_position = ptc.position;
+    var ptc_rotation_mode = ptc.rotation_mode;
+    var ptc_rotation_mix = ptc.rotation_mix;
+    var ptc_rotation = ptc.rotation;
+
+    var anim_ptc = anim && anim.ptcs[ptc_key];
+    if (anim_ptc) {
+      keyframe_index = spine.Keyframe.find(anim_ptc.ptc_spacing_keyframes, time);
+      if (keyframe_index !== -1) {
+        var ptc_spacing_keyframe0 = anim_ptc.ptc_spacing_keyframes[keyframe_index];
+        var ptc_spacing_keyframe1 = anim_ptc.ptc_spacing_keyframes[keyframe_index + 1];
+        if (ptc_spacing_keyframe1) {
+          pct = ptc_spacing_keyframe0.curve.evaluate((time - ptc_spacing_keyframe0.time) / (ptc_spacing_keyframe1.time - ptc_spacing_keyframe0.time));
+          ptc_spacing = spine.tween(ptc_spacing_keyframe0.spacing, ptc_spacing_keyframe1.spacing, pct);
+        } else {
+          ptc_spacing = ptc_spacing_keyframe0.spacing;
+        }
+      }
+
+      keyframe_index = spine.Keyframe.find(anim_ptc.ptc_position_keyframes, time);
+      if (keyframe_index !== -1) {
+        var ptc_position_keyframe0 = anim_ptc.ptc_position_keyframes[keyframe_index];
+        var ptc_position_keyframe1 = anim_ptc.ptc_position_keyframes[keyframe_index + 1];
+        if (ptc_position_keyframe1) {
+          pct = ptc_position_keyframe0.curve.evaluate((time - ptc_position_keyframe0.time) / (ptc_position_keyframe1.time - ptc_position_keyframe0.time));
+          ptc_position_mix = spine.tween(ptc_position_keyframe0.position_mix, ptc_position_keyframe1.position_mix, pct);
+          ptc_position = spine.tween(ptc_position_keyframe0.position, ptc_position_keyframe1.position, pct);
+        } else {
+          ptc_position_mix = ptc_position_keyframe0.position_mix;
+          ptc_position = ptc_position_keyframe0.position;
+        }
+      }
+
+      keyframe_index = spine.Keyframe.find(anim_ptc.ptc_rotation_keyframes, time);
+      if (keyframe_index !== -1) {
+        var ptc_rotation_keyframe0 = anim_ptc.ptc_rotation_keyframes[keyframe_index];
+        var ptc_rotation_keyframe1 = anim_ptc.ptc_rotation_keyframes[keyframe_index + 1];
+        if (ptc_rotation_keyframe1) {
+          pct = ptc_rotation_keyframe0.curve.evaluate((time - ptc_rotation_keyframe0.time) / (ptc_rotation_keyframe1.time - ptc_rotation_keyframe0.time));
+          ptc_rotation_mix = spine.tween(ptc_rotation_keyframe0.rotation_mix, ptc_rotation_keyframe1.rotation_mix, pct);
+          ptc_rotation = spine.tween(ptc_rotation_keyframe0.rotation, ptc_rotation_keyframe1.rotation, pct);
+        } else {
+          ptc_rotation_mix = ptc_rotation_keyframe0.rotation_mix;
+          ptc_rotation = ptc_rotation_keyframe0.rotation;
+        }
+      }
+    }
+
+    var skin = data && data.skins[pose.skin_key];
+    var default_skin = data && data.skins['default'];
+    var slot_key = ptc.target_key;
+    var pose_slot = pose.slots[slot_key];
+    var skin_slot = skin && (skin.slots[slot_key] || default_skin.slots[slot_key]);
+    var ptc_target = skin_slot && skin_slot.attachments[pose_slot.attachment_key];
+
+    ptc.bone_keys.forEach(function(bone_key) {
+      var ptc_bone = pose.bones[bone_key];
+      // TODO
+    });
+  });
+
+  // events
 
   pose.events.length = 0;
 
@@ -7345,6 +7747,43 @@ RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         ctxApplyAtlasSitePosition(ctx, site);
         ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_setup_position, stroke_style, fill_style);
+        break;
+      case 'path':
+        if (attachment.vertices.length === attachment.vertex_count * 2) {
+          // non-weighted path
+          var bone = spine_pose.data.bones[slot.bone_key];
+          ctxApplySpace(ctx, bone.world_space);
+          var count = attachment.vertices.length / 6;
+          ctx.beginPath();
+          var x = attachment.vertices[2];
+          var y = attachment.vertices[3];
+          ctx.moveTo(x, y);
+          for (var index = 1; index < (count + 1); ++index) {
+            var x0 = attachment.vertices[(index*6 - 2) % attachment.vertices.length];
+            var y0 = attachment.vertices[(index*6 - 1) % attachment.vertices.length];
+            var x1 = attachment.vertices[(index*6 + 0) % attachment.vertices.length];
+            var y1 = attachment.vertices[(index*6 + 1) % attachment.vertices.length];
+            var x2 = attachment.vertices[(index*6 + 2) % attachment.vertices.length];
+            var y2 = attachment.vertices[(index*6 + 3) % attachment.vertices.length];
+            ctx.bezierCurveTo(x0, y0, x1, y1, x2, y2);
+          }
+          ctx.closePath();
+          ctx.strokeStyle = 'orange';
+          ctx.stroke();
+          ctx.beginPath();
+          for (var index = 0; index < count; ++index) {
+            var x = attachment.vertices[index*6 + 0];
+            var y = attachment.vertices[index*6 + 1];
+            ctx.moveTo(x, y);
+            var x = attachment.vertices[index*6 + 4];
+            var y = attachment.vertices[index*6 + 5];
+            ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = 'white';
+          ctx.stroke();
+        } else {
+          // weighted path
+        }
         break;
     }
 
@@ -8562,14 +9001,8 @@ function mat4x4Translate(m, x, y, z) {
 }
 
 function mat4x4RotateCosSinZ(m, c, s) {
-  var a_x = m[0],
-    a_y = m[1],
-    a_z = m[2],
-    a_w = m[3];
-  var b_x = m[4],
-    b_y = m[5],
-    b_z = m[6],
-    b_w = m[7];
+  var a_x = m[0], a_y = m[1], a_z = m[2], a_w = m[3];
+  var b_x = m[4], b_y = m[5], b_z = m[6], b_w = m[7];
   m[0] = a_x * c + b_x * s;
   m[1] = a_y * c + b_y * s;
   m[2] = a_z * c + b_z * s;
