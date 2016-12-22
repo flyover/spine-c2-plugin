@@ -3212,10 +3212,16 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 			canvas.width = cr.nextHighestPowerOfTwo(img.width);
 			canvas.height = cr.nextHighestPowerOfTwo(img.height);
 			var ctx = canvas.getContext("2d");
-			ctx["webkitImageSmoothingEnabled"] = linearsampling;
-			ctx["mozImageSmoothingEnabled"] = linearsampling;
-			ctx["msImageSmoothingEnabled"] = linearsampling;
-			ctx["imageSmoothingEnabled"] = linearsampling;
+			if (typeof ctx["imageSmoothingEnabled"] !== "undefined")
+			{
+				ctx["imageSmoothingEnabled"] = linearsampling;
+			}
+			else
+			{
+				ctx["webkitImageSmoothingEnabled"] = linearsampling;
+				ctx["mozImageSmoothingEnabled"] = linearsampling;
+				ctx["msImageSmoothingEnabled"] = linearsampling;
+			}
 			ctx.drawImage(img,
 						  0, 0, img.width, img.height,
 						  0, 0, canvas.width, canvas.height);
@@ -3378,20 +3384,6 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 ;
 (function()
 {
-	function window_innerWidth()
-	{
-		if (typeof jQuery !== "undefined")
-			return jQuery(window).width();
-		else
-			return window.innerWidth;
-	};
-	function window_innerHeight()
-	{
-		if (typeof jQuery !== "undefined")
-			return jQuery(window).height();
-		else
-			return window.innerHeight;
-	};
 	var raf = window["requestAnimationFrame"] ||
 	  window["mozRequestAnimationFrame"]    ||
 	  window["webkitRequestAnimationFrame"] ||
@@ -3464,6 +3456,13 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		if (!this.isMobile)
 		{
 			this.isMobile = /(blackberry|bb10|playbook|palm|symbian|nokia|windows\s+ce|phone|mobile|tablet|kindle|silk)/i.test(navigator.userAgent);
+		}
+		this.isWKWebView = !!(this.isiOS && this.isCordova && window["webkit"]);
+		this.httpServer = null;
+		this.httpServerUrl = "";
+		if (this.isWKWebView)
+		{
+			this.httpServer = (cordova && cordova["plugins"] && cordova["plugins"]["CorHttpd"]) ? cordova["plugins"]["CorHttpd"] : null;
 		}
 		if (typeof cr_is_preview !== "undefined" && !this.isNWjs && (window.location.search === "?nw" || /nodewebkit/i.test(navigator.userAgent) || /nwjs/i.test(navigator.userAgent)))
 		{
@@ -3616,6 +3615,40 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 	Runtime.prototype.requestProjectData = function ()
 	{
 		var self = this;
+		if (this.isWKWebView)
+		{
+			if (this.httpServer)
+			{
+				this.httpServer["startServer"]({
+					"port": 0,
+					"localhost_only": true
+				}, function (url)
+				{
+					self.httpServerUrl = url;
+					self.fetchLocalFileViaCordovaAsText("data.js", function (str)
+					{
+						self.loadProject(JSON.parse(str));
+					}, function (err)
+					{
+						alert("Error fetching data.js");
+					});
+				}, function (err)
+				{
+					alert("error starting local server: " + err);
+				});
+			}
+			else
+			{
+				this.fetchLocalFileViaCordovaAsText("data.js", function (str)
+				{
+					self.loadProject(JSON.parse(str));
+				}, function (err)
+				{
+					alert("Error fetching data.js");
+				});
+			}
+			return;
+		}
 		var xhr;
 		if (this.isWindowsPhone8)
 			xhr = new ActiveXObject("Microsoft.XMLHTTP");
@@ -3701,7 +3734,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		var attribs;
 		var alpha_canvas = !!(this.forceCanvasAlpha || (this.alphaBackground && !(this.isNWjs || this.isWinJS || this.isWindowsPhone8 || this.isCrosswalk || this.isCordova || this.isAmazonWebApp)));
 		if (this.fullscreen_mode > 0)
-			this["setSize"](window_innerWidth(), window_innerHeight(), true);
+			this["setSize"](window.innerWidth, window.innerHeight, true);
 		try {
 			if (this.enableWebGL && (this.isCocoonJs || this.isEjecta || !this.isDomFree))
 			{
@@ -3837,10 +3870,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 					};
 					this.ctx = this.canvas.getContext("2d", attribs);
 				}
-				this.ctx["webkitImageSmoothingEnabled"] = this.linearSampling;
-				this.ctx["mozImageSmoothingEnabled"] = this.linearSampling;
-				this.ctx["msImageSmoothingEnabled"] = this.linearSampling;
-				this.ctx["imageSmoothingEnabled"] = this.linearSampling;
+				this.setCtxImageSmoothingEnabled(this.ctx, this.linearSampling);
 			}
 			this.overlay_canvas = null;
 			this.overlay_ctx = null;
@@ -3873,7 +3903,9 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 				});
 				jQuery(window).blur(function ()
 				{
-					self["setSuspended"](true);
+					var parent = window.parent;
+					if (!parent || !parent.document.hasFocus())
+						self["setSuspended"](true);
 				});
 			}
 		}
@@ -3920,9 +3952,6 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 	{
 		var offx = 0, offy = 0;
 		var neww = 0, newh = 0, intscale = 0;
-		var tryHideAddressBar = (this.isiPhoneiOS6 && this.isSafari && !navigator["standalone"] && !this.isDomFree && !this.isCordova);
-		if (tryHideAddressBar)
-			h += 60;		// height of Safari iPhone iOS 6 address bar
 		if (this.lastWindowWidth === w && this.lastWindowHeight === h && !force)
 			return;
 		this.lastWindowWidth = w;
@@ -4000,13 +4029,6 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		}
 		if (mode < 2)
 			this.aspect_scale = dpr;
-		if (this.isRetina && this.isiPad && dpr > 1)	// don't apply to iPad 1-2
-		{
-			if (w >= 1024)
-				w = 1023;		// 2046 retina pixels
-			if (h >= 1024)
-				h = 1023;
-		}
 		this.cssWidth = Math.round(w);
 		this.cssHeight = Math.round(h);
 		this.width = Math.round(w * dpr);
@@ -4104,17 +4126,12 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		}
 		if (this.ctx)
 		{
-			this.ctx["webkitImageSmoothingEnabled"] = this.linearSampling;
-			this.ctx["mozImageSmoothingEnabled"] = this.linearSampling;
-			this.ctx["msImageSmoothingEnabled"] = this.linearSampling;
-			this.ctx["imageSmoothingEnabled"] = this.linearSampling;
+			this.setCtxImageSmoothingEnabled(this.ctx, this.linearSampling);
 		}
 		this.tryLockOrientation();
-		if (!this.isDomFree && (tryHideAddressBar || this.isiPhone))
+		if (this.isiPhone && !this.isCordova)
 		{
-			window.setTimeout(function () {
-				window.scrollTo(0, 1);
-			}, 100);
+			window.scrollTo(0, 0);
 		}
 	};
 	Runtime.prototype.tryLockOrientation = function ()
@@ -4126,7 +4143,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 			orientation = "landscape";
 		try {
 			if (screen["orientation"] && screen["orientation"]["lock"])
-				screen["orientation"]["lock"](orientation);
+				screen["orientation"]["lock"](orientation).catch(function(){});
 			else if (screen["lockOrientation"])
 				screen["lockOrientation"](orientation);
 			else if (screen["webkitLockOrientation"])
@@ -4182,6 +4199,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 	Runtime.prototype["setSuspended"] = function (s)
 	{
 		var i, len;
+		var self = this;
 		if (s && !this.isSuspended)
 		{
 			cr.logexport("[Construct 2] Suspending");
@@ -4241,7 +4259,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		{
 			var loaderImage = new Image();
 			loaderImage.crossOrigin = "anonymous";
-			loaderImage.src = "loading-logo.png";
+			this.setImageSrc(loaderImage, "loading-logo.png");
 			this.loaderlogos = {
 				logo: loaderImage
 			};
@@ -4596,7 +4614,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 			else
 			{
 				img_.crossOrigin = "anonymous";			// required for Arcade sandbox compatibility
-				img_.src = src_;
+				this.setImageSrc(img_, src_);			// work around WKWebView problems
 			}
 		}
 		this.wait_for_textures.push(img_);
@@ -4664,6 +4682,12 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		var ctx = this.ctx || this.overlay_ctx;
 		if (this.overlay_canvas)
 			this.positionOverlayCanvas();
+		var curwidth = window.innerWidth;
+		var curheight = window.innerHeight;
+		if (this.lastWindowWidth !== curwidth || this.lastWindowHeight !== curheight)
+		{
+			this["setSize"](curwidth, curheight);
+		}
 		this.progress = 0;
 		this.last_progress = -1;
 		var self = this;
@@ -4921,6 +4945,8 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		{
 			this.loadingprogress = 1;
 			this.trigger(cr.system_object.prototype.cnds.OnLoadFinished, null);
+			if (window["C2_RegisterSW"])		// note not all platforms use SW
+				window["C2_RegisterSW"]();
 		}
 		if (navigator["splashscreen"] && navigator["splashscreen"]["hide"])
 			navigator["splashscreen"]["hide"]();
@@ -4963,13 +4989,13 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		var isfullscreen = (document["mozFullScreen"] || document["webkitIsFullScreen"] || document["fullScreen"] || !!document["msFullscreenElement"]) && !this.isCordova;
 		if ((isfullscreen || this.isNodeFullscreen) && this.fullscreen_scaling > 0)
 			fsmode = this.fullscreen_scaling;
-		if (fsmode > 0 && (!this.isiOS || window.self !== window.top))
+		if (fsmode > 0)	// r222: experimentally enabling this workaround for all platforms
 		{
 			var curwidth = window.innerWidth;
 			var curheight = window.innerHeight;
 			if (this.lastWindowWidth !== curwidth || this.lastWindowHeight !== curheight)
 			{
-				this["setSize"](window_innerWidth(), window_innerHeight());
+				this["setSize"](curwidth, curheight);
 			}
 		}
 		if (!this.isDomFree)
@@ -5020,6 +5046,8 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 				this.isloading = false;
 				this.progress = 1;
 				this.trigger(cr.system_object.prototype.cnds.OnLoadFinished, null);
+				if (window["C2_RegisterSW"])
+					window["C2_RegisterSW"]();
 			}
 		}
 		this.logic(raf_time);
@@ -5063,12 +5091,14 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 			this.cpuutilisation = this.logictime;
 			this.logictime = 0;
 		}
+		var wallDt = 0;
 		if (this.last_tick_time !== 0)
 		{
 			var ms_diff = cur_time - this.last_tick_time;
 			if (ms_diff < 0)
 				ms_diff = 0;
-			this.dt1 = ms_diff / 1000.0; // dt measured in seconds
+			wallDt = ms_diff / 1000.0; // dt measured in seconds
+			this.dt1 = wallDt;
 			if (this.dt1 > 0.5)
 				this.dt1 = 0;
 			else if (this.dt1 > 1 / this.minimumFramerate)
@@ -5077,7 +5107,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		this.last_tick_time = cur_time;
         this.dt = this.dt1 * this.timescale;
         this.kahanTime.add(this.dt);
-		this.wallTime.add(this.dt1);
+		this.wallTime.add(wallDt);		// prevent min/max framerate affecting wall clock
 		var isfullscreen = (document["mozFullScreen"] || document["webkitIsFullScreen"] || document["fullScreen"] || !!document["msFullscreenElement"] || this.isNodeFullscreen) && !this.isCordova;
 		if (this.fullscreen_mode >= 2 /* scale */ || (isfullscreen && this.fullscreen_scaling > 0))
 		{
@@ -5224,7 +5254,30 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		if (prev_layout == changeToLayout)
 			cr.clearArray(this.system.waits);
 		cr.clearArray(this.registered_collisions);
+		this.runLayoutChangeMethods(true);
 		changeToLayout.startRunning();
+		this.runLayoutChangeMethods(false);
+		this.redraw = true;
+		this.layout_first_tick = true;
+		this.ClearDeathRow();
+	};
+	Runtime.prototype.runLayoutChangeMethods = function (isBeforeChange)
+	{
+		var i, len, beh, type, j, lenj, inst, k, lenk, binst;
+		for (i = 0, len = this.behaviors.length; i < len; i++)
+		{
+			beh = this.behaviors[i];
+			if (isBeforeChange)
+			{
+				if (beh.onBeforeLayoutChange)
+					beh.onBeforeLayoutChange();
+			}
+			else
+			{
+				if (beh.onLayoutChange)
+					beh.onLayoutChange();
+			}
+		}
 		for (i = 0, len = this.types_by_index.length; i < len; i++)
 		{
 			type = this.types_by_index[i];
@@ -5233,22 +5286,35 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 			for (j = 0, lenj = type.instances.length; j < lenj; j++)
 			{
 				inst = type.instances[j];
-				if (inst.onLayoutChange)
-					inst.onLayoutChange();
+				if (isBeforeChange)
+				{
+					if (inst.onBeforeLayoutChange)
+						inst.onBeforeLayoutChange();
+				}
+				else
+				{
+					if (inst.onLayoutChange)
+						inst.onLayoutChange();
+				}
 				if (inst.behavior_insts)
 				{
 					for (k = 0, lenk = inst.behavior_insts.length; k < lenk; k++)
 					{
 						binst = inst.behavior_insts[k];
-						if (binst.onLayoutChange)
-							binst.onLayoutChange();
+						if (isBeforeChange)
+						{
+							if (binst.onBeforeLayoutChange)
+								binst.onBeforeLayoutChange();
+						}
+						else
+						{
+							if (binst.onLayoutChange)
+								binst.onLayoutChange();
+						}
 					}
 				}
 			}
 		}
-		this.redraw = true;
-		this.layout_first_tick = true;
-		this.ClearDeathRow();
 	};
 	Runtime.prototype.pretickMe = function (inst)
     {
@@ -5888,7 +5954,8 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 	{
 		var sol = type.getCurrentSol();
 		var i, j, inst, len;
-		var lx, ly;
+		var orblock = this.getCurrentEventStack().current_event.orblock;
+		var lx, ly, arr;
 		if (sol.select_all)
 		{
 			if (!inverted)
@@ -5909,14 +5976,17 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 					else
 						sol.instances.push(inst);
 				}
+				else if (orblock)
+					sol.else_instances.push(inst);
 			}
 		}
 		else
 		{
 			j = 0;
-			for (i = 0, len = sol.instances.length; i < len; i++)
+			arr = (orblock ? sol.else_instances : sol.instances);
+			for (i = 0, len = arr.length; i < len; i++)
 			{
-				inst = sol.instances[i];
+				inst = arr[i];
 				inst.update_bbox();
 				lx = inst.layer.canvasToLayer(ptx, pty, true);
 				ly = inst.layer.canvasToLayer(ptx, pty, false);
@@ -5924,6 +5994,8 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 				{
 					if (inverted)
 						return false;
+					else if (orblock)
+						sol.instances.push(inst);
 					else
 					{
 						sol.instances[j] = sol.instances[i];
@@ -5932,7 +6004,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 				}
 			}
 			if (!inverted)
-				sol.instances.length = j;
+				arr.length = j;
 		}
 		type.applySolToContainer();
 		if (inverted)
@@ -6703,6 +6775,16 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		var evinfo = this.getCurrentEventStack();
 		return evinfo.current_event.conditions[evinfo.cndindex];
 	};
+	Runtime.prototype.getCurrentConditionObjectType = function ()
+	{
+		var cnd = this.getCurrentCondition();
+		return cnd.type;
+	};
+	Runtime.prototype.isCurrentConditionFirst = function ()
+	{
+		var evinfo = this.getCurrentEventStack();
+		return evinfo.cndindex === 0;
+	};
 	Runtime.prototype.getCurrentAction = function ()
 	{
 		var evinfo = this.getCurrentEventStack();
@@ -6946,6 +7028,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 					catch (f)
 					{
 						cr.logexport("Failed to save game state: " + e + "; " + f);
+						self.trigger(cr.system_object.prototype.cnds.OnSaveFailed, null);
 					}
 				});
 			}
@@ -6963,6 +7046,7 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 				catch (e)
 				{
 					cr.logexport("Error saving to WebStorage: " + e);
+					self.trigger(cr.system_object.prototype.cnds.OnSaveFailed, null);
 				}
 			}
 			this.saveToSlot = "";
@@ -7503,6 +7587,115 @@ quat4.str=function(a){return"["+a[0]+", "+a[1]+", "+a[2]+", "+a[3]+"]"};
 		if (o["data"])
 			inst.loadFromJSON(o["data"]);
 	};
+	Runtime.prototype.fetchLocalFileViaCordova = function (filename, successCallback, errorCallback)
+	{
+		var path = cordova["file"]["applicationDirectory"] + "www/" + filename;
+		window["resolveLocalFileSystemURL"](path, function (entry)
+		{
+			entry.file(successCallback, errorCallback);
+		}, errorCallback);
+	};
+	Runtime.prototype.fetchLocalFileViaCordovaAsText = function (filename, successCallback, errorCallback)
+	{
+		this.fetchLocalFileViaCordova(filename, function (file)
+		{
+			var reader = new FileReader();
+			reader.onload = function (e)
+			{
+				successCallback(e.target.result);
+			};
+			reader.onerror = errorCallback;
+			reader.readAsText(file);
+		}, errorCallback);
+	};
+	var queuedArrayBufferReads = [];
+	var activeArrayBufferReads = 0;
+	var MAX_ARRAYBUFFER_READS = 8;
+	Runtime.prototype.maybeStartNextArrayBufferRead = function()
+	{
+		if (!queuedArrayBufferReads.length)
+			return;		// none left
+		if (activeArrayBufferReads >= MAX_ARRAYBUFFER_READS)
+			return;		// already got maximum number in-flight
+		activeArrayBufferReads++;
+		var job = queuedArrayBufferReads.shift();
+		this.doFetchLocalFileViaCordovaAsArrayBuffer(job.filename, job.successCallback, job.errorCallback);
+	};
+	Runtime.prototype.fetchLocalFileViaCordovaAsArrayBuffer = function (filename, successCallback_, errorCallback_)
+	{
+		var self = this;
+		queuedArrayBufferReads.push({
+			filename: filename,
+			successCallback: function (result)
+			{
+				activeArrayBufferReads--;
+				self.maybeStartNextArrayBufferRead();
+				successCallback_(result);
+			},
+			errorCallback: function (err)
+			{
+				activeArrayBufferReads--;
+				self.maybeStartNextArrayBufferRead();
+				errorCallback_(err);
+			}
+		});
+		this.maybeStartNextArrayBufferRead();
+	};
+	Runtime.prototype.doFetchLocalFileViaCordovaAsArrayBuffer = function (filename, successCallback, errorCallback)
+	{
+		this.fetchLocalFileViaCordova(filename, function (file)
+		{
+			var reader = new FileReader();
+			reader.onload = function (e)
+			{
+				successCallback(e.target.result);
+			};
+			reader.readAsArrayBuffer(file);
+		}, errorCallback);
+	};
+	Runtime.prototype.fetchLocalFileViaCordovaAsURL = function (filename, successCallback, errorCallback)
+	{
+		this.fetchLocalFileViaCordovaAsArrayBuffer(filename, function (arrayBuffer)
+		{
+			var blob = new Blob([arrayBuffer]);
+			var url = URL.createObjectURL(blob);
+			successCallback(url);
+		}, errorCallback);
+	};
+	Runtime.prototype.isAbsoluteUrl = function (url)
+	{
+		return /^(?:[a-z]+:)?\/\//.test(url) || url.substr(0, 5) === "data:"  || url.substr(0, 5) === "blob:";
+	};
+	Runtime.prototype.setImageSrc = function (img, src)
+	{
+		if (this.isWKWebView && !this.isAbsoluteUrl(src))
+		{
+			this.fetchLocalFileViaCordovaAsURL(src, function (url)
+			{
+				img.src = url;
+			}, function (err)
+			{
+				alert("Failed to load image: " + err);
+			});
+		}
+		else
+		{
+			img.src = src;
+		}
+	};
+	Runtime.prototype.setCtxImageSmoothingEnabled = function (ctx, e)
+	{
+		if (typeof ctx["imageSmoothingEnabled"] !== "undefined")
+		{
+			ctx["imageSmoothingEnabled"] = e;
+		}
+		else
+		{
+			ctx["webkitImageSmoothingEnabled"] = e;
+			ctx["mozImageSmoothingEnabled"] = e;
+			ctx["msImageSmoothingEnabled"] = e;
+		}
+	};
 	cr.runtime = Runtime;
 	cr.createRuntime = function (canvasid)
 	{
@@ -7580,6 +7773,8 @@ window["cr_setSuspended"] = function(s)
 		this.angle = 0;
 		this.first_visit = true;
 		this.name = m[0];
+		this.originalWidth = m[1];
+		this.originalHeight = m[2];
 		this.width = m[1];
 		this.height = m[2];
 		this.unbounded_scrolling = m[3];
@@ -7685,6 +7880,8 @@ window["cr_setSuspended"] = function(s)
 			this.event_sheet.updateDeepIncludes();
 		}
 		this.runtime.running_layout = this;
+		this.width = this.originalWidth;
+		this.height = this.originalHeight;
 		this.scrollX = (this.runtime.original_width / 2);
 		this.scrollY = (this.runtime.original_height / 2);
 		var i, k, len, lenk, type, type_instances, inst, iid, t, s, p, q, type_data, layer;
@@ -7959,10 +8156,7 @@ window["cr_setSuspended"] = function(s)
 			}
 			if (ctx_changed)
 			{
-				layout_ctx["webkitImageSmoothingEnabled"] = this.runtime.linearSampling;
-				layout_ctx["mozImageSmoothingEnabled"] = this.runtime.linearSampling;
-				layout_ctx["msImageSmoothingEnabled"] = this.runtime.linearSampling;
-				layout_ctx["imageSmoothingEnabled"] = this.runtime.linearSampling;
+				this.runtime.setCtxImageSmoothingEnabled(layout_ctx, this.runtime.linearSampling);
 			}
 		}
 		layout_ctx.globalAlpha = 1;
@@ -8345,9 +8539,22 @@ window["cr_setSuspended"] = function(s)
 				glw.clearRect(clearleft, y, clearright - clearleft, h);
 				if (inst)
 				{
+					var pixelWidth;
+					var pixelHeight;
+					if (inst.curFrame && inst.curFrame.texture_img)
+					{
+						var img = inst.curFrame.texture_img;
+						pixelWidth = 1.0 / img.width;
+						pixelHeight = 1.0 / img.height;
+					}
+					else
+					{
+						pixelWidth = 1.0 / inst.width;
+						pixelHeight = 1.0 / inst.height;
+					}
 					glw.setProgramParameters(rendertarget,					// backTex
-											 1.0 / inst.width,				// pixelWidth
-											 1.0 / inst.height,				// pixelHeight
+											 pixelWidth,
+											 pixelHeight,
 											 rcTex2.left, rcTex2.top,		// destStart
 											 rcTex2.right, rcTex2.bottom,	// destEnd
 											 layerScale,
@@ -8660,7 +8867,8 @@ window["cr_setSuspended"] = function(s)
 			if (!hasPersistBehavior || this.layout.first_visit)
 			{
 				inst = this.runtime.createInstanceFromInit(initial_inst, this, true);
-;
+				if (!inst)
+					continue;		// may have skipped creation due to fallback effect "destroy"
 				created_instances.push(inst);
 				if (inst.type.global)
 				{
@@ -8960,10 +9168,7 @@ window["cr_setSuspended"] = function(s)
 			}
 			if (ctx_changed)
 			{
-				layer_ctx["webkitImageSmoothingEnabled"] = this.runtime.linearSampling;
-				layer_ctx["mozImageSmoothingEnabled"] = this.runtime.linearSampling;
-				layer_ctx["msImageSmoothingEnabled"] = this.runtime.linearSampling;
-				layer_ctx["imageSmoothingEnabled"] = this.runtime.linearSampling;
+				this.runtime.setCtxImageSmoothingEnabled(layer_ctx, this.runtime.linearSampling);
 			}
 			if (this.transparent)
 				layer_ctx.clearRect(0, 0, this.runtime.draw_width, this.runtime.draw_height);
@@ -9058,6 +9263,19 @@ window["cr_setSuspended"] = function(s)
 		this.viewTop = py;
 		this.viewRight = px + (this.runtime.draw_width * (1 / myscale));
 		this.viewBottom = py + (this.runtime.draw_height * (1 / myscale));
+		var temp;
+		if (this.viewLeft > this.viewRight)
+		{
+			temp = this.viewLeft;
+			this.viewLeft = this.viewRight;
+			this.viewRight = temp;
+		}
+		if (this.viewTop > this.viewBottom)
+		{
+			temp = this.viewTop;
+			this.viewTop = this.viewBottom;
+			this.viewBottom = temp;
+		}
 		var myAngle = this.getAngle();
 		if (myAngle !== 0)
 		{
@@ -9340,9 +9558,22 @@ window["cr_setSuspended"] = function(s)
 				destEndX = screenright / windowWidth;
 				destEndY = 1 - screenbottom / windowHeight;
 			}
+			var pixelWidth;
+			var pixelHeight;
+			if (inst.curFrame && inst.curFrame.texture_img)
+			{
+				var img = inst.curFrame.texture_img;
+				pixelWidth = 1.0 / img.width;
+				pixelHeight = 1.0 / img.height;
+			}
+			else
+			{
+				pixelWidth = 1.0 / inst.width;
+				pixelHeight = 1.0 / inst.height;
+			}
 			glw.setProgramParameters(this.render_offscreen ? this.runtime.layer_tex : this.layout.getRenderTarget(), // backTex
-									 1.0 / inst.width,			// pixelWidth
-									 1.0 / inst.height,			// pixelHeight
+									 pixelWidth,
+									 pixelHeight,
 									 destStartX, destStartY,
 									 destEndX, destEndY,
 									 myscale,
@@ -10716,7 +10947,7 @@ window["cr_setSuspended"] = function(s)
 				break;
 			case 10:	// instvar
 				this.index = m[1];
-				if (owner.type.is_family)
+				if (owner.type && owner.type.is_family)
 				{
 					this.get = this.get_familyvar;
 					this.variesPerInstance = true;
@@ -12372,6 +12603,10 @@ cr.system_object.prototype.loadFromJSON = function (o)
 	{
 		return true;
 	};
+	SysCnds.prototype.OnSaveFailed = function ()
+	{
+		return true;
+	};
 	SysCnds.prototype.OnLoadComplete = function ()
 	{
 		return true;
@@ -13117,6 +13352,68 @@ cr.system_object.prototype.loadFromJSON = function (o)
 		if (f > 120)
 			f = 120;
 		this.runtime.minimumFramerate = f;
+	};
+	function SortZOrderList(a, b)
+	{
+		var layerA = a[0];
+		var layerB = b[0];
+		var diff = layerA - layerB;
+		if (diff !== 0)
+			return diff;
+		var indexA = a[1];
+		var indexB = b[1];
+		return indexA - indexB;
+	};
+	function SortInstancesByValue(a, b)
+	{
+		return a[1] - b[1];
+	};
+	SysActs.prototype.SortZOrderByInstVar = function (obj, iv)
+	{
+		if (!obj)
+			return;
+		var i, len, inst, value, r, layer, toZ;
+		var sol = obj.getCurrentSol();
+		var pickedInstances = sol.getObjects();
+		var zOrderList = [];
+		var instValues = [];
+		var layout = this.runtime.running_layout;
+		var isFamily = obj.is_family;
+		var familyIndex = obj.family_index;
+		for (i = 0, len = pickedInstances.length; i < len; ++i)
+		{
+			inst = pickedInstances[i];
+			if (!inst.layer)
+				continue;		// not a world instance
+			if (isFamily)
+				value = inst.instance_vars[iv + inst.type.family_var_map[familyIndex]];
+			else
+				value = inst.instance_vars[iv];
+			zOrderList.push([
+				inst.layer.index,
+				inst.get_zindex()
+			]);
+			instValues.push([
+				inst,
+				value
+			]);
+		}
+		if (!zOrderList.length)
+			return;				// no instances were world instances
+		zOrderList.sort(SortZOrderList);
+		instValues.sort(SortInstancesByValue);
+		for (i = 0, len = zOrderList.length; i < len; ++i)
+		{
+			inst = instValues[i][0];					// instance in the order we want
+			layer = layout.layers[zOrderList[i][0]];	// layer to put it on
+			toZ = zOrderList[i][1];						// Z index on that layer to put it
+			if (layer.instances[toZ] !== inst)			// not already got this instance there
+			{
+				layer.instances[toZ] = inst;			// update instance
+				inst.layer = layer;						// update instance's layer reference (could have changed)
+				layer.setZIndicesStaleFrom(toZ);		// mark Z indices stale from this point since they have changed
+			}
+		}
 	};
 	sysProto.acts = new SysActs();
     function SysExps() {};
@@ -14863,6 +15160,7 @@ cr.plugins_.Audio = function(runtime)
 	var micTag = "";
 	var isMusicWorkaround = false;
 	var musicPlayNextTouch = [];
+	var playMusicAsSoundWorkaround = false;		// play music tracks with Web Audio API
 	function dbToLinear(x)
 	{
 		var v = dbToLinear_nocap(x);
@@ -14915,19 +15213,19 @@ cr.plugins_.Audio = function(runtime)
 		else
 			return context["createDelayNode"](d);
 	};
-	function startSource(s)
+	function startSource(s, scheduledTime)
 	{
 		if (s["start"])
-			s["start"](0);
+			s["start"](scheduledTime || 0);
 		else
-			s["noteOn"](0);
+			s["noteOn"](scheduledTime || 0);
 	};
-	function startSourceAt(s, x, d)
+	function startSourceAt(s, x, d, scheduledTime)
 	{
 		if (s["start"])
-			s["start"](0, x);
+			s["start"](scheduledTime || 0, x);
 		else
-			s["noteGrainOn"](0, x, d - x);
+			s["noteGrainOn"](scheduledTime || 0, x, d - x);
 	};
 	function stopSource(s)
 	{
@@ -15601,25 +15899,14 @@ cr.plugins_.Audio = function(runtime)
 	AnalyserEffect.prototype.setParam = function(param, value, ramp, time)
 	{
 	};
-	var OT_POS_SAMPLES = 4;
 	function ObjectTracker()
 	{
 		this.obj = null;
 		this.loadUid = 0;
-		this.speeds = [];
-		this.lastX = 0;
-		this.lastY = 0;
-		this.moveAngle = 0;
 	};
 	ObjectTracker.prototype.setObject = function (obj_)
 	{
 		this.obj = obj_;
-		if (this.obj)
-		{
-			this.lastX = this.obj.x;
-			this.lastY = this.obj.y;
-		}
-		cr.clearArray(this.speeds);
 	};
 	ObjectTracker.prototype.hasObject = function ()
 	{
@@ -15627,38 +15914,6 @@ cr.plugins_.Audio = function(runtime)
 	};
 	ObjectTracker.prototype.tick = function (dt)
 	{
-		if (!this.obj || dt === 0)
-			return;
-		this.moveAngle = cr.angleTo(this.lastX, this.lastY, this.obj.x, this.obj.y);
-		var s = cr.distanceTo(this.lastX, this.lastY, this.obj.x, this.obj.y) / dt;
-		if (this.speeds.length < OT_POS_SAMPLES)
-			this.speeds.push(s);
-		else
-		{
-			this.speeds.shift();
-			this.speeds.push(s);
-		}
-		this.lastX = this.obj.x;
-		this.lastY = this.obj.y;
-	};
-	ObjectTracker.prototype.getSpeed = function ()
-	{
-		if (!this.speeds.length)
-			return 0;
-		var i, len, sum = 0;
-		for (i = 0, len = this.speeds.length; i < len; i++)
-		{
-			sum += this.speeds[i];
-		}
-		return sum / this.speeds.length;
-	};
-	ObjectTracker.prototype.getVelocityX = function ()
-	{
-		return Math.cos(this.moveAngle) * this.getSpeed();
-	};
-	ObjectTracker.prototype.getVelocityY = function ()
-	{
-		return Math.sin(this.moveAngle) * this.getSpeed();
 	};
 	var iOShadtouchstart = false;	// has had touch start input on iOS <=8 to work around web audio API muting
 	var iOShadtouchend = false;		// has had touch end input on iOS 9+ to work around web audio API muting
@@ -15677,7 +15932,7 @@ cr.plugins_.Audio = function(runtime)
 		this.supportWebAudioAPI = false;
 		this.failedToLoad = false;
 		this.wasEverReady = false;	// if a buffer is ever marked as ready, it's permanently considered ready after then.
-		if (api === API_WEBAUDIO && is_music)
+		if (api === API_WEBAUDIO && is_music && !playMusicAsSoundWorkaround)
 		{
 			this.myapi = API_HTML5;
 			this.outNode = createGain();
@@ -15709,17 +15964,31 @@ cr.plugins_.Audio = function(runtime)
 			this.bufferObject.src = src_;
 			break;
 		case API_WEBAUDIO:
-			request = new XMLHttpRequest();
-			request.open("GET", src_, true);
-			request.responseType = "arraybuffer";
-			request.onload = function () {
-				self.audioData = request.response;
-				self.decodeAudioBuffer();
-			};
-			request.onerror = function () {
-				self.failedToLoad = true;
-			};
-			request.send();
+			if (audRuntime.isWKWebView)
+			{
+				audRuntime.fetchLocalFileViaCordovaAsArrayBuffer(src_, function (arrayBuffer)
+				{
+					self.audioData = arrayBuffer;
+					self.decodeAudioBuffer();
+				}, function (err)
+				{
+					self.failedToLoad = true;
+				});
+			}
+			else
+			{
+				request = new XMLHttpRequest();
+				request.open("GET", src_, true);
+				request.responseType = "arraybuffer";
+				request.onload = function () {
+					self.audioData = request.response;
+					self.decodeAudioBuffer();
+				};
+				request.onerror = function () {
+					self.failedToLoad = true;
+				};
+				request.send();
+			}
 			break;
 		case API_CORDOVA:
 			this.bufferObject = true;
@@ -15728,6 +15997,22 @@ cr.plugins_.Audio = function(runtime)
 			this.bufferObject = true;
 			break;
 		}
+	};
+	C2AudioBuffer.prototype.release = function ()
+	{
+		var i, len, j, a;
+		for (i = 0, j = 0, len = audioInstances.length; i < len; ++i)
+		{
+			a = audioInstances[i];
+			audioInstances[j] = a;
+			if (a.buffer === this)
+				a.stop();
+			else
+				++j;		// keep
+		}
+		audioInstances.length = j;
+		this.bufferObject = null;
+		this.audioData = null;
 	};
 	C2AudioBuffer.prototype.decodeAudioBuffer = function ()
 	{
@@ -16081,16 +16366,14 @@ cr.plugins_.Audio = function(runtime)
 			a = inst.angle - inst.layer.getAngle();
 			this.pannerNode["setOrientation"](Math.cos(a), Math.sin(a), 0);
 		}
-		px = cr.rotatePtAround(this.objectTracker.getVelocityX(), this.objectTracker.getVelocityY(), -inst.layer.getAngle(), 0, 0, true);
-		py = cr.rotatePtAround(this.objectTracker.getVelocityX(), this.objectTracker.getVelocityY(), -inst.layer.getAngle(), 0, 0, false);
-		this.pannerNode["setVelocity"](px, py, 0);
 	};
-	C2AudioInstance.prototype.play = function (looping, vol, fromPosition)
+	C2AudioInstance.prototype.play = function (looping, vol, fromPosition, scheduledTime)
 	{
 		var instobj = this.instanceObject;
 		this.looping = looping;
 		this.volume = vol;
 		var seekPos = fromPosition || 0;
+		scheduledTime = scheduledTime || 0;
 		switch (this.myapi) {
 		case API_HTML5:
 			if (instobj.playbackRate !== 1.0)
@@ -16141,9 +16424,9 @@ cr.plugins_.Audio = function(runtime)
 				this.instanceObject.loop = looping;
 				this.hasPlaybackEnded = false;
 				if (seekPos === 0)
-					startSource(this.instanceObject);
+					startSource(this.instanceObject, scheduledTime);
 				else
-					startSourceAt(this.instanceObject, seekPos, this.getDuration());
+					startSourceAt(this.instanceObject, seekPos, this.getDuration(), scheduledTime);
 			}
 			else
 			{
@@ -16626,7 +16909,9 @@ cr.plugins_.Audio = function(runtime)
 		audInst = this;
 		this.listenerTracker = null;
 		this.listenerZ = -600;
-		if ((this.runtime.isiOS || (this.runtime.isAndroid && (this.runtime.isChrome || this.runtime.isAndroidStockBrowser))) && !this.runtime.isCrosswalk && !this.runtime.isDomFree && !this.runtime.isAmazonWebApp)
+		if (this.runtime.isWKWebView)
+			playMusicAsSoundWorkaround = true;
+		if ((this.runtime.isiOS || (this.runtime.isAndroid && (this.runtime.isChrome || this.runtime.isAndroidStockBrowser))) && !this.runtime.isCrosswalk && !this.runtime.isDomFree && !this.runtime.isAmazonWebApp && !playMusicAsSoundWorkaround)
 		{
 			isMusicWorkaround = true;
 		}
@@ -16641,27 +16926,26 @@ cr.plugins_.Audio = function(runtime)
 			api = API_WEBAUDIO;
 			context = new webkitAudioContext();
 		}
+		if (this.runtime.isiOS && context)
+		{
+			if (context.close)
+				context.close();
+			if (typeof AudioContext !== "undefined")
+				context = new AudioContext();
+			else if (typeof webkitAudioContext !== "undefined")
+				context = new webkitAudioContext();
+		}
 		var isAndroid = this.runtime.isAndroid;
 		var playDummyBuffer = function ()
 		{
-			if (isContextSuspended)
+			if (isContextSuspended || !context["createBuffer"])
 				return;
 			var buffer = context["createBuffer"](1, 220, 22050);
-			if (buffer["getChannelData"] && isAndroid)
-			{
-				var data = buffer["getChannelData"](0);
-				for (var i = 0, len = data.length; i < len; ++i)
-					data[i] = 0.1;		// low level nonzero DC (likely inaudible)
-			}
 			var source = context["createBufferSource"]();
 			source["buffer"] = buffer;
 			source["connect"](context["destination"]);
 			startSource(source);
 		};
-		if (isAndroid)
-		{
-			window.setInterval(playDummyBuffer, 25000);
-		}
 		if (isMusicWorkaround)
 		{
 			var playQueuedMusic = function ()
@@ -16689,6 +16973,17 @@ cr.plugins_.Audio = function(runtime)
 					iOShadtouchend = true;
 				}
 				playQueuedMusic();
+			}, true);
+		}
+		else if (playMusicAsSoundWorkaround)
+		{
+			document.addEventListener("touchend", function ()
+			{
+				if (!iOShadtouchend && context)
+				{
+					playDummyBuffer();
+					iOShadtouchend = true;
+				}
 			}, true);
 		}
 		if (api !== API_WEBAUDIO)
@@ -16751,6 +17046,7 @@ cr.plugins_.Audio = function(runtime)
 		timescale_mode = this.properties[0];	// 0 = off, 1 = sounds only, 2 = all
 		this.saveload = this.properties[1];		// 0 = all, 1 = sounds only, 2 = music only, 3 = none
 		this.playinbackground = (this.properties[2] !== 0);
+		this.nextPlayTime = 0;
 		panningModel = this.properties[3];		// 0 = equalpower, 1 = hrtf, 3 = soundfield
 		distanceModel = this.properties[4];		// 0 = linear, 1 = inverse, 2 = exponential
 		this.listenerZ = -this.properties[5];
@@ -16762,8 +17058,6 @@ cr.plugins_.Audio = function(runtime)
 		var draw_height = (this.runtime.draw_height || this.runtime.height);
 		if (api === API_WEBAUDIO)
 		{
-			if (typeof context["listener"]["dopplerFactor"] !== "undefined")
-				context["listener"]["dopplerFactor"] = 0;
 			context["listener"]["setPosition"](draw_width / 2, draw_height / 2, this.listenerZ);
 			context["listener"]["setOrientation"](0, 0, 1, 0, -1, 0);
 			window["c2OnAudioMicStream"] = function (localMediaStream, tag)
@@ -17114,7 +17408,6 @@ cr.plugins_.Audio = function(runtime)
 			listenerX = this.listenerTracker.obj.x;
 			listenerY = this.listenerTracker.obj.y;
 			context["listener"]["setPosition"](this.listenerTracker.obj.x, this.listenerTracker.obj.y, this.listenerZ);
-			context["listener"]["setVelocity"](this.listenerTracker.getVelocityX(), this.listenerTracker.getVelocityY(), 0);
 		}
 	};
 	var preload_list = [];
@@ -17168,6 +17461,20 @@ cr.plugins_.Audio = function(runtime)
 		};
 		return completed;
 	};
+	instanceProto.releaseAllMusicBuffers = function ()
+	{
+		var i, len, j, b;
+		for (i = 0, j = 0, len = audioBuffers.length; i < len; ++i)
+		{
+			b = audioBuffers[i];
+			audioBuffers[j] = b;
+			if (b.is_music)
+				b.release();
+			else
+				++j;		// keep
+		}
+		audioBuffers.length = j;
+	};
 	instanceProto.getAudioBuffer = function (src_, is_music)
 	{
 		var i, len, a, ret = null, j, k, lenj, ai;
@@ -17182,6 +17489,8 @@ cr.plugins_.Audio = function(runtime)
 		}
 		if (!ret)
 		{
+			if (playMusicAsSoundWorkaround && is_music)
+				this.releaseAllMusicBuffers();
 			ret = new C2AudioBuffer(src_, is_music);
 			audioBuffers.push(ret);
 		}
@@ -17343,7 +17652,8 @@ cr.plugins_.Audio = function(runtime)
 		if (!lastAudio)
 			return;
 		lastAudio.setPannerEnabled(false);
-		lastAudio.play(looping!==0, v);
+		lastAudio.play(looping!==0, v, 0, this.nextPlayTime);
+		this.nextPlayTime = 0;
 	};
 	Acts.prototype.PlayAtPosition = function (file, looping, vol, x_, y_, angle_, innerangle_, outerangle_, outergain_, tag)
 	{
@@ -17361,7 +17671,8 @@ cr.plugins_.Audio = function(runtime)
 		}
 		lastAudio.setPannerEnabled(true);
 		lastAudio.setPan(x_, y_, angle_, innerangle_, outerangle_, dbToLinear(outergain_));
-		lastAudio.play(looping!==0, v);
+		lastAudio.play(looping!==0, v, 0, this.nextPlayTime);
+		this.nextPlayTime = 0;
 	};
 	Acts.prototype.PlayAtObject = function (file, looping, vol, obj, innerangle, outerangle, outergain, tag)
 	{
@@ -17385,7 +17696,8 @@ cr.plugins_.Audio = function(runtime)
 		var py = cr.rotatePtAround(inst.x, inst.y, -inst.layer.getAngle(), listenerX, listenerY, false);
 		lastAudio.setPan(px, py, cr.to_degrees(inst.angle - inst.layer.getAngle()), innerangle, outerangle, dbToLinear(outergain));
 		lastAudio.setObject(inst);
-		lastAudio.play(looping!==0, v);
+		lastAudio.play(looping!==0, v, 0, this.nextPlayTime);
+		this.nextPlayTime = 0;
 	};
 	Acts.prototype.PlayByName = function (folder, filename, looping, vol, tag)
 	{
@@ -17398,7 +17710,8 @@ cr.plugins_.Audio = function(runtime)
 		if (!lastAudio)
 			return;
 		lastAudio.setPannerEnabled(false);
-		lastAudio.play(looping!==0, v);
+		lastAudio.play(looping!==0, v, 0, this.nextPlayTime);
+		this.nextPlayTime = 0;
 	};
 	Acts.prototype.PlayAtPositionByName = function (folder, filename, looping, vol, x_, y_, angle_, innerangle_, outerangle_, outergain_, tag)
 	{
@@ -17416,7 +17729,8 @@ cr.plugins_.Audio = function(runtime)
 		}
 		lastAudio.setPannerEnabled(true);
 		lastAudio.setPan(x_, y_, angle_, innerangle_, outerangle_, dbToLinear(outergain_));
-		lastAudio.play(looping!==0, v);
+		lastAudio.play(looping!==0, v, 0, this.nextPlayTime);
+		this.nextPlayTime = 0;
 	};
 	Acts.prototype.PlayAtObjectByName = function (folder, filename, looping, vol, obj, innerangle, outerangle, outergain, tag)
 	{
@@ -17440,7 +17754,8 @@ cr.plugins_.Audio = function(runtime)
 		var py = cr.rotatePtAround(inst.x, inst.y, -inst.layer.getAngle(), listenerX, listenerY, false);
 		lastAudio.setPan(px, py, cr.to_degrees(inst.angle - inst.layer.getAngle()), innerangle, outerangle, dbToLinear(outergain));
 		lastAudio.setObject(inst);
-		lastAudio.play(looping!==0, v);
+		lastAudio.play(looping!==0, v, 0, this.nextPlayTime);
+		this.nextPlayTime = 0;
 	};
 	Acts.prototype.SetLooping = function (tag, looping)
 	{
@@ -17741,6 +18056,12 @@ cr.plugins_.Audio = function(runtime)
 	{
 		this.listenerZ = z;
 	};
+	Acts.prototype.ScheduleNextPlay = function (t)
+	{
+		if (!context)
+			return;		// needs Web Audio API
+		this.nextPlayTime = t;
+	};
 	pluginProto.acts = new Acts();
 	function Exps() {};
 	Exps.prototype.Duration = function (ret, tag)
@@ -17831,6 +18152,14 @@ cr.plugins_.Audio = function(runtime)
 			ret.set_float(analyser.rms);
 		else
 			ret.set_float(0);
+	};
+	Exps.prototype.SampleRate = function (ret)
+	{
+		ret.set_int(context ? context.sampleRate : 0);
+	};
+	Exps.prototype.CurrentTime = function (ret)
+	{
+		ret.set_float(context ? context.currentTime : cr.performance_now());
 	};
 	pluginProto.exps = new Exps();
 }());
@@ -17954,7 +18283,8 @@ goog.define = function(name, defaultValue) {
         Object.prototype.hasOwnProperty.call(
             goog.global.CLOSURE_UNCOMPILED_DEFINES, name)) {
       value = goog.global.CLOSURE_UNCOMPILED_DEFINES[name];
-    } else if (goog.global.CLOSURE_DEFINES &&
+    } else if (
+        goog.global.CLOSURE_DEFINES &&
         Object.prototype.hasOwnProperty.call(
             goog.global.CLOSURE_DEFINES, name)) {
       value = goog.global.CLOSURE_DEFINES[name];
@@ -18008,7 +18338,7 @@ goog.define('goog.TRUSTED_SITE', true);
  *
  * This define can be used to trigger alternate implementations compatible with
  * running in EcmaScript Strict mode or warn about unavailable functionality.
- * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions_and_function_scope/Strict_mode
+ * @see https://goo.gl/PudQ4y
  *
  */
 goog.define('goog.STRICT_MODE_COMPATIBLE', false);
@@ -18045,6 +18375,9 @@ goog.define('goog.ENABLE_CHROME_APP_SAFE_SCRIPT_LOADING', false);
  *     "goog.package.part".
  */
 goog.provide = function(name) {
+  if (goog.isInModuleLoader_()) {
+    throw Error('goog.provide can not be used within a goog.module.');
+  }
   if (!COMPILED) {
     if (goog.isProvided_(name)) {
       throw Error('Namespace "' + name + '" already declared.');
@@ -18111,13 +18444,18 @@ goog.VALID_MODULE_RE_ = /^[a-zA-Z_$][a-zA-Z0-9._$]*$/;
  *     "goog.package.part", is expected but not required.
  */
 goog.module = function(name) {
-  if (!goog.isString(name) ||
-      !name ||
+  if (!goog.isString(name) || !name ||
       name.search(goog.VALID_MODULE_RE_) == -1) {
     throw Error('Invalid module identifier');
   }
   if (!goog.isInModuleLoader_()) {
-    throw Error('Module ' + name + ' has been loaded incorrectly.');
+    throw Error(
+        'Module ' + name + ' has been loaded incorrectly. Note, ' +
+        'modules cannot be loaded as normal scripts. They require some kind of ' +
+        'pre-processing step. You\'re likely trying to load a module via a ' +
+        'script tag or as a part of a concatenated bundle without rewriting the ' +
+        'module. For more info see: ' +
+        'https://github.com/google/closure-library/wiki/goog.module:-an-ES6-module-like-alternative-to-goog.provide.');
   }
   if (goog.moduleLoaderState_.moduleName) {
     throw Error('goog.module may only be called once per module.');
@@ -18151,9 +18489,8 @@ goog.module.get = function(name) {
 goog.module.getInternal_ = function(name) {
   if (!COMPILED) {
     if (goog.isProvided_(name)) {
-      return name in goog.loadedModules_ ?
-          goog.loadedModules_[name] :
-          goog.getObjectByName(name);
+      return name in goog.loadedModules_ ? goog.loadedModules_[name] :
+                                           goog.getObjectByName(name);
     } else {
       return null;
     }
@@ -18178,11 +18515,13 @@ goog.isInModuleLoader_ = function() {
  */
 goog.module.declareLegacyNamespace = function() {
   if (!COMPILED && !goog.isInModuleLoader_()) {
-    throw new Error('goog.module.declareLegacyNamespace must be called from ' +
+    throw new Error(
+        'goog.module.declareLegacyNamespace must be called from ' +
         'within a goog.module');
   }
   if (!COMPILED && !goog.moduleLoaderState_.moduleName) {
-    throw Error('goog.module must be called prior to ' +
+    throw Error(
+        'goog.module must be called prior to ' +
         'goog.module.declareLegacyNamespace.');
   }
   goog.moduleLoaderState_.declareLegacyNamespace = true;
@@ -18201,8 +18540,9 @@ goog.module.declareLegacyNamespace = function() {
 goog.setTestOnly = function(opt_message) {
   if (goog.DISALLOW_TEST_ONLY_CODE) {
     opt_message = opt_message || '';
-    throw Error('Importing test-only code into non-debug environment' +
-                (opt_message ? ': ' + opt_message : '.'));
+    throw Error(
+        'Importing test-only code into non-debug environment' +
+        (opt_message ? ': ' + opt_message : '.'));
   }
 };
 /**
@@ -18241,7 +18581,7 @@ if (!COMPILED) {
   goog.isProvided_ = function(name) {
     return (name in goog.loadedModules_) ||
         (!goog.implicitNamespaces_[name] &&
-            goog.isDefAndNotNull(goog.getObjectByName(name)));
+         goog.isDefAndNotNull(goog.getObjectByName(name)));
   };
   /**
    * Namespaces implicitly defined by goog.provide. For example,
@@ -18267,7 +18607,7 @@ if (!COMPILED) {
 goog.getObjectByName = function(name, opt_obj) {
   var parts = name.split('.');
   var cur = opt_obj || goog.global;
-  for (var part; part = parts.shift(); ) {
+  for (var part; part = parts.shift();) {
     if (goog.isDefAndNotNull(cur[part])) {
       cur = cur[part];
     } else {
@@ -18297,17 +18637,22 @@ goog.globalize = function(obj, opt_global) {
  *     the names of the objects this file provides.
  * @param {!Array<string>} requires An array of strings with
  *     the names of the objects this file requires.
- * @param {boolean=} opt_isModule Whether this dependency must be loaded as
- *     a module as declared by goog.module.
+ * @param {boolean|!Object<string>=} opt_loadFlags Parameters indicating
+ *     how the file must be loaded.  The boolean 'true' is equivalent
+ *     to {'module': 'goog'} for backwards-compatibility.  Valid properties
+ *     and values include {'module': 'goog'} and {'lang': 'es6'}.
  */
-goog.addDependency = function(relPath, provides, requires, opt_isModule) {
+goog.addDependency = function(relPath, provides, requires, opt_loadFlags) {
   if (goog.DEPENDENCIES_ENABLED) {
     var provide, require;
     var path = relPath.replace(/\\/g, '/');
     var deps = goog.dependencies_;
+    if (!opt_loadFlags || typeof opt_loadFlags === 'boolean') {
+      opt_loadFlags = opt_loadFlags ? {'module': 'goog'} : {};
+    }
     for (var i = 0; provide = provides[i]; i++) {
       deps.nameToPath[provide] = path;
-      deps.pathIsModule[path] = !!opt_isModule;
+      deps.loadFlags[path] = opt_loadFlags;
     }
     for (var j = 0; require = requires[j]; j++) {
       if (!(path in deps.requires)) {
@@ -18356,20 +18701,18 @@ goog.require = function(name) {
     if (goog.isProvided_(name)) {
       if (goog.isInModuleLoader_()) {
         return goog.module.getInternal_(name);
-      } else {
-        return null;
       }
-    }
-    if (goog.ENABLE_DEBUG_LOADER) {
+    } else if (goog.ENABLE_DEBUG_LOADER) {
       var path = goog.getPathFromDeps_(name);
       if (path) {
         goog.writeScripts_(path);
-        return null;
+      } else {
+        var errorMessage = 'goog.require could not find: ' + name;
+        goog.logToConsole_(errorMessage);
+        throw Error(errorMessage);
       }
     }
-    var errorMessage = 'goog.require could not find: ' + name;
-    goog.logToConsole_(errorMessage);
-    throw Error(errorMessage);
+    return null;
   }
 };
 /**
@@ -18468,13 +18811,25 @@ goog.loadedModules_ = {};
  * @const {boolean}
  */
 goog.DEPENDENCIES_ENABLED = !COMPILED && goog.ENABLE_DEBUG_LOADER;
+/**
+ * @define {string} How to decide whether to transpile.  Valid values
+ * are 'always', 'never', and 'detect'.  The default ('detect') is to
+ * use feature detection to determine which language levels need
+ * transpilation.
+ */
+goog.define('goog.TRANSPILE', 'detect');
+/**
+ * @define {string} Path to the transpiler.  Executing the script at this
+ * path (relative to base.js) should define a function $jscomp.transpile.
+ */
+goog.define('goog.TRANSPILER', 'transpile.js');
 if (goog.DEPENDENCIES_ENABLED) {
   /**
    * This object is used to keep track of dependencies and other data that is
    * used for loading scripts.
    * @private
    * @type {{
-   *   pathIsModule: !Object<string, boolean>,
+   *   loadFlags: !Object<string, !Object<string, string>>,
    *   nameToPath: !Object<string, string>,
    *   requires: !Object<string, !Object<string, boolean>>,
    *   visited: !Object<string, boolean>,
@@ -18483,12 +18838,12 @@ if (goog.DEPENDENCIES_ENABLED) {
    * }}
    */
   goog.dependencies_ = {
-    pathIsModule: {}, // 1 to 1
-    nameToPath: {}, // 1 to 1
-    requires: {}, // 1 to many
+    loadFlags: {},  // 1 to 1
+    nameToPath: {},  // 1 to 1
+    requires: {},  // 1 to many
     visited: {},
-    written: {}, // Used to keep track of script files we have written.
-    deferred: {} // Used to track deferred module evaluations in old IEs
+    written: {},  // Used to keep track of script files we have written.
+    deferred: {}  // Used to track deferred module evaluations in old IEs
   };
   /**
    * Tries to detect whether is in the context of an HTML document.
@@ -18533,25 +18888,31 @@ if (goog.DEPENDENCIES_ENABLED) {
    * @private
    */
   goog.importScript_ = function(src, opt_sourceText) {
-    var importScript = goog.global.CLOSURE_IMPORT_SCRIPT ||
-        goog.writeScriptTag_;
+    var importScript =
+        goog.global.CLOSURE_IMPORT_SCRIPT || goog.writeScriptTag_;
     if (importScript(src, opt_sourceText)) {
       goog.dependencies_.written[src] = true;
     }
   };
-  /** @const @private {boolean} */
-  goog.IS_OLD_IE_ = !!(!goog.global.atob && goog.global.document &&
-      goog.global.document.all);
   /**
-   * Given a URL initiate retrieval and execution of the module.
+   * Whether the browser is IE9 or earlier, which needs special handling
+   * for deferred modules.
+   * @const @private {boolean}
+   */
+  goog.IS_OLD_IE_ =
+      !!(!goog.global.atob && goog.global.document && goog.global.document.all);
+  /**
+   * Given a URL initiate retrieval and execution of a script that needs
+   * pre-processing.
    * @param {string} src Script source URL.
+   * @param {boolean} isModule Whether this is a goog.module.
+   * @param {boolean} needsTranspile Whether this source needs transpilation.
    * @private
    */
-  goog.importModule_ = function(src) {
-    var bootstrap = 'goog.retrieveAndExecModule_("' + src + '");';
-    if (goog.importScript_('', bootstrap)) {
-      goog.dependencies_.written[src] = true;
-    }
+  goog.importProcessedScript_ = function(src, isModule, needsTranspile) {
+    var bootstrap = 'goog.retrieveAndExec_("' + src + '", ' + isModule + ', ' +
+        needsTranspile + ');';
+    goog.importScript_('', bootstrap);
   };
   /** @private {!Array<string>} */
   goog.queuedModules_ = [];
@@ -18567,9 +18928,8 @@ if (goog.DEPENDENCIES_ENABLED) {
     if (!goog.LOAD_MODULE_USING_EVAL || !goog.isDef(goog.global.JSON)) {
       return '' +
           'goog.loadModule(function(exports) {' +
-          '"use strict";' +
-          scriptText +
-          '\n' + // terminate any trailing single line comment.
+          '"use strict";' + scriptText +
+          '\n' +  // terminate any trailing single line comment.
           ';return exports' +
           '});' +
           '\n//# sourceURL=' + srcUrl + '\n';
@@ -18603,8 +18963,7 @@ if (goog.DEPENDENCIES_ENABLED) {
    * @private
    */
   goog.maybeProcessDeferredDep_ = function(name) {
-    if (goog.isDeferredModule_(name) &&
-        goog.allDepsAreAvailable_(name)) {
+    if (goog.isDeferredModule_(name) && goog.allDepsAreAvailable_(name)) {
       var path = goog.getPathFromDeps_(name);
       goog.maybeProcessDeferredPath_(goog.basePath + path);
     }
@@ -18617,7 +18976,10 @@ if (goog.DEPENDENCIES_ENABLED) {
    */
   goog.isDeferredModule_ = function(name) {
     var path = goog.getPathFromDeps_(name);
-    if (path && goog.dependencies_.pathIsModule[path]) {
+    var loadFlags = path && goog.dependencies_.loadFlags[path] || {};
+    var languageLevel = loadFlags['lang'] || 'es3';
+    if (path && (loadFlags['module'] == 'goog' ||
+                 goog.needsTranspile_(languageLevel))) {
       var abspath = goog.basePath + path;
       return (abspath) in goog.dependencies_.deferred;
     }
@@ -18673,53 +19035,7 @@ if (goog.DEPENDENCIES_ENABLED) {
    * @param {string} url The URL from which to attempt to load the goog.module.
    */
   goog.loadModuleFromUrl = function(url) {
-    goog.retrieveAndExecModule_(url);
-  };
-  /**
-   * @param {function(?):?|string} moduleDef The module definition.
-   */
-  goog.loadModule = function(moduleDef) {
-    var previousState = goog.moduleLoaderState_;
-    try {
-      goog.moduleLoaderState_ = {
-        moduleName: undefined,
-        declareLegacyNamespace: false
-      };
-      var exports;
-      if (goog.isFunction(moduleDef)) {
-        exports = moduleDef.call(goog.global, {});
-      } else if (goog.isString(moduleDef)) {
-        exports = goog.loadModuleFromSource_.call(goog.global, moduleDef);
-      } else {
-        throw Error('Invalid module definition');
-      }
-      var moduleName = goog.moduleLoaderState_.moduleName;
-      if (!goog.isString(moduleName) || !moduleName) {
-        throw Error('Invalid module name \"' + moduleName + '\"');
-      }
-      if (goog.moduleLoaderState_.declareLegacyNamespace) {
-        goog.constructNamespace_(moduleName, exports);
-      } else if (goog.SEAL_MODULE_EXPORTS && Object.seal) {
-        Object.seal(exports);
-      }
-      goog.loadedModules_[moduleName] = exports;
-    } finally {
-      goog.moduleLoaderState_ = previousState;
-    }
-  };
-  /**
-   * @private @const {function(string):?}
-   *
-   * The new type inference warns because this function has no formal
-   * parameters, but its jsdoc says that it takes one argument.
-   * (The argument is used via arguments[0], but NTI does not detect this.)
-   * @suppress {newCheckTypes}
-   */
-  goog.loadModuleFromSource_ = function() {
-    'use strict';
-    var exports = {};
-    eval(arguments[0]);
-    return exports;
+    goog.retrieveAndExec_(url, true, false);
   };
   /**
    * Writes a new script pointing to {@code src} directly into the DOM.
@@ -18732,7 +19048,8 @@ if (goog.DEPENDENCIES_ENABLED) {
    */
   goog.writeScriptSrcNode_ = function(src) {
     goog.global.document.write(
-        '<script type="text/javascript" src="' + src + '"></' + 'script>');
+        '<script type="text/javascript" src="' + src + '"></' +
+        'script>');
   };
   /**
    * Appends a new script node to the DOM using a CSP-compliant mechanism. This
@@ -18755,8 +19072,8 @@ if (goog.DEPENDENCIES_ENABLED) {
   goog.appendScriptSrcNode_ = function(src) {
     /** @type {Document} */
     var doc = goog.global.document;
-    var scriptEl = /** @type {HTMLScriptElement} */ (
-        doc.createElement('script'));
+    var scriptEl =
+        /** @type {HTMLScriptElement} */ (doc.createElement('script'));
     scriptEl.type = 'text/javascript';
     scriptEl.src = src;
     scriptEl.defer = false;
@@ -18785,32 +19102,65 @@ if (goog.DEPENDENCIES_ENABLED) {
           throw Error('Cannot write "' + src + '" after document load');
         }
       }
-      var isOldIE = goog.IS_OLD_IE_;
       if (opt_sourceText === undefined) {
-        if (!isOldIE) {
+        if (!goog.IS_OLD_IE_) {
           if (goog.ENABLE_CHROME_APP_SAFE_SCRIPT_LOADING) {
             goog.appendScriptSrcNode_(src);
           } else {
             goog.writeScriptSrcNode_(src);
           }
         } else {
-          var state = " onreadystatechange='goog.onScriptLoad_(this, " +
-              ++goog.lastNonModuleScriptIndex_ + ")' ";
+          var state = ' onreadystatechange=\'goog.onScriptLoad_(this, ' +
+              ++goog.lastNonModuleScriptIndex_ + ')\' ';
           doc.write(
-              '<script type="text/javascript" src="' +
-                  src + '"' + state + '></' + 'script>');
+              '<script type="text/javascript" src="' + src + '"' + state +
+              '></' +
+              'script>');
         }
       } else {
         doc.write(
             '<script type="text/javascript">' +
-            opt_sourceText +
-            '</' + 'script>');
+            goog.protectScriptTag_(opt_sourceText) + '</' +
+            'script>');
       }
       return true;
     } else {
       return false;
     }
   };
+  /**
+   * Rewrites closing script tags in input to avoid ending an enclosing script
+   * tag.
+   *
+   * @param {string} str
+   * @return {string}
+   * @private
+   */
+  goog.protectScriptTag_ = function(str) {
+    return str.replace(/<\/(SCRIPT)/ig, '\\x3c\\$1');
+  };
+  /**
+   * Determines whether the given language needs to be transpiled.
+   * @param {string} lang
+   * @return {boolean}
+   * @private
+   */
+  goog.needsTranspile_ = function(lang) {
+    if (goog.TRANSPILE == 'always') {
+      return true;
+    } else if (goog.TRANSPILE == 'never') {
+      return false;
+    } else if (!goog.requiresTranspilation_) {
+      goog.requiresTranspilation_ = goog.createRequiresTranspilation_();
+    }
+    if (lang in goog.requiresTranspilation_) {
+      return goog.requiresTranspilation_[lang];
+    } else {
+      throw new Error('Unknown language mode: ' + lang);
+    }
+  };
+  /** @private {?Object<string, boolean>} */
+  goog.requiresTranspilation_ = null;
   /** @private {number} */
   goog.lastNonModuleScriptIndex_ = 0;
   /**
@@ -18874,10 +19224,15 @@ if (goog.DEPENDENCIES_ENABLED) {
     for (var i = 0; i < scripts.length; i++) {
       var path = scripts[i];
       if (path) {
-        if (!deps.pathIsModule[path]) {
-          goog.importScript_(goog.basePath + path);
+        var loadFlags = deps.loadFlags[path] || {};
+        var languageLevel = loadFlags['lang'] || 'es3';
+        var needsTranspile = goog.needsTranspile_(languageLevel);
+        if (loadFlags['module'] == 'goog' || needsTranspile) {
+          goog.importProcessedScript_(
+              goog.basePath + path, loadFlags['module'] == 'goog',
+              needsTranspile);
         } else {
-          goog.importModule_(goog.basePath + path);
+          goog.importScript_(goog.basePath + path);
         }
       } else {
         goog.moduleLoaderState_ = moduleState;
@@ -18906,6 +19261,53 @@ if (goog.DEPENDENCIES_ENABLED) {
   }
 }
 /**
+ * @param {function(?):?|string} moduleDef The module definition.
+ */
+goog.loadModule = function(moduleDef) {
+  var previousState = goog.moduleLoaderState_;
+  try {
+    goog.moduleLoaderState_ = {
+      moduleName: undefined,
+      declareLegacyNamespace: false
+    };
+    var exports;
+    if (goog.isFunction(moduleDef)) {
+      exports = moduleDef.call(undefined, {});
+    } else if (goog.isString(moduleDef)) {
+      exports = goog.loadModuleFromSource_.call(undefined, moduleDef);
+    } else {
+      throw Error('Invalid module definition');
+    }
+    var moduleName = goog.moduleLoaderState_.moduleName;
+    if (!goog.isString(moduleName) || !moduleName) {
+      throw Error('Invalid module name \"' + moduleName + '\"');
+    }
+    if (goog.moduleLoaderState_.declareLegacyNamespace) {
+      goog.constructNamespace_(moduleName, exports);
+    } else if (
+        goog.SEAL_MODULE_EXPORTS && Object.seal && goog.isObject(exports)) {
+      Object.seal(exports);
+    }
+    goog.loadedModules_[moduleName] = exports;
+  } finally {
+    goog.moduleLoaderState_ = previousState;
+  }
+};
+/**
+ * @private @const {function(string):?}
+ *
+ * The new type inference warns because this function has no formal
+ * parameters, but its jsdoc says that it takes one argument.
+ * (The argument is used via arguments[0], but NTI does not detect this.)
+ * @suppress {newCheckTypes}
+ */
+goog.loadModuleFromSource_ = function() {
+  'use strict';
+  var exports = {};
+  eval(arguments[0]);
+  return exports;
+};
+/**
  * Normalize a file path by removing redundant ".." and extraneous "." file
  * path components.
  * @param {string} path
@@ -18918,8 +19320,9 @@ goog.normalizePath_ = function(path) {
   while (i < components.length) {
     if (components[i] == '.') {
       components.splice(i, 1);
-    } else if (i && components[i] == '..' &&
-        components[i - 1] && components[i - 1] != '..') {
+    } else if (
+        i && components[i] == '..' && components[i - 1] &&
+        components[i - 1] != '..') {
       components.splice(--i, 2);
     } else {
       i++;
@@ -18930,45 +19333,96 @@ goog.normalizePath_ = function(path) {
 /**
  * Loads file by synchronous XHR. Should not be used in production environments.
  * @param {string} src Source URL.
- * @return {string} File contents.
+ * @return {?string} File contents, or null if load failed.
  * @private
  */
 goog.loadFileSync_ = function(src) {
   if (goog.global.CLOSURE_LOAD_FILE_SYNC) {
     return goog.global.CLOSURE_LOAD_FILE_SYNC(src);
   } else {
-    /** @type {XMLHttpRequest} */
-    var xhr = new goog.global['XMLHttpRequest']();
-    xhr.open('get', src, false);
-    xhr.send();
-    return xhr.responseText;
+    try {
+      /** @type {XMLHttpRequest} */
+      var xhr = new goog.global['XMLHttpRequest']();
+      xhr.open('get', src, false);
+      xhr.send();
+      return xhr.status == 0 || xhr.status == 200 ? xhr.responseText : null;
+    } catch (err) {
+      return null;
+    }
   }
 };
 /**
- * Retrieve and execute a module.
+ * Retrieve and execute a script that needs some sort of wrapping.
  * @param {string} src Script source URL.
+ * @param {boolean} isModule Whether to load as a module.
+ * @param {boolean} needsTranspile Whether to transpile down to ES3.
  * @private
  */
-goog.retrieveAndExecModule_ = function(src) {
+goog.retrieveAndExec_ = function(src, isModule, needsTranspile) {
   if (!COMPILED) {
     var originalPath = src;
     src = goog.normalizePath_(src);
-    var importScript = goog.global.CLOSURE_IMPORT_SCRIPT ||
-        goog.writeScriptTag_;
+    var importScript =
+        goog.global.CLOSURE_IMPORT_SCRIPT || goog.writeScriptTag_;
     var scriptText = goog.loadFileSync_(src);
-    if (scriptText != null) {
-      var execModuleScript = goog.wrapModule_(src, scriptText);
-      var isOldIE = goog.IS_OLD_IE_;
-      if (isOldIE) {
-        goog.dependencies_.deferred[originalPath] = execModuleScript;
-        goog.queuedModules_.push(originalPath);
-      } else {
-        importScript(src, execModuleScript);
-      }
+    if (scriptText == null) {
+      throw new Error('Load of "' + src + '" failed');
+    }
+    if (needsTranspile) {
+      scriptText = goog.transpile_.call(goog.global, scriptText, src);
+    }
+    if (isModule) {
+      scriptText = goog.wrapModule_(src, scriptText);
     } else {
-      throw new Error('load of ' + src + 'failed');
+      scriptText += '\n//# sourceURL=' + src;
+    }
+    var isOldIE = goog.IS_OLD_IE_;
+    if (isOldIE) {
+      goog.dependencies_.deferred[originalPath] = scriptText;
+      goog.queuedModules_.push(originalPath);
+    } else {
+      importScript(src, scriptText);
     }
   }
+};
+/**
+ * Lazily retrieves the transpiler and applies it to the source.
+ * @param {string} code JS code.
+ * @param {string} path Path to the code.
+ * @return {string} The transpiled code.
+ * @private
+ */
+goog.transpile_ = function(code, path) {
+  var jscomp = goog.global['$jscomp'];
+  if (!jscomp) {
+    goog.global['$jscomp'] = jscomp = {};
+  }
+  var transpile = jscomp.transpile;
+  if (!transpile) {
+    var transpilerPath = goog.basePath + goog.TRANSPILER;
+    var transpilerCode = goog.loadFileSync_(transpilerPath);
+    if (transpilerCode) {
+      eval(transpilerCode + '\n//# sourceURL=' + transpilerPath);
+      if (goog.global['$gwtExport'] && goog.global['$gwtExport']['$jscomp'] &&
+          !goog.global['$gwtExport']['$jscomp']['transpile']) {
+        throw new Error(
+            'The transpiler did not properly export the "transpile" ' +
+            'method. $gwtExport: ' + JSON.stringify(goog.global['$gwtExport']));
+      }
+      goog.global['$jscomp'].transpile =
+          goog.global['$gwtExport']['$jscomp']['transpile'];
+      jscomp = goog.global['$jscomp'];
+      transpile = jscomp.transpile;
+    }
+  }
+  if (!transpile) {
+    var suffix = ' requires transpilation but no transpiler was found.';
+    transpile = jscomp.transpile = function(code, path) {
+      goog.logToConsole_(path + suffix);
+      return code;
+    };
+  }
+  return transpile(code, path);
 };
 /**
  * This is a "fixed" version of the typeof operator.  It differs from the typeof
@@ -18992,16 +19446,16 @@ goog.typeOf = function(value) {
       }
       if ((className == '[object Array]' ||
            typeof value.length == 'number' &&
-           typeof value.splice != 'undefined' &&
-           typeof value.propertyIsEnumerable != 'undefined' &&
-           !value.propertyIsEnumerable('splice')
-          )) {
+               typeof value.splice != 'undefined' &&
+               typeof value.propertyIsEnumerable != 'undefined' &&
+               !value.propertyIsEnumerable('splice')
+               )) {
         return 'array';
       }
       if ((className == '[object Function]' ||
-          typeof value.call != 'undefined' &&
-          typeof value.propertyIsEnumerable != 'undefined' &&
-          !value.propertyIsEnumerable('call'))) {
+           typeof value.call != 'undefined' &&
+               typeof value.propertyIsEnumerable != 'undefined' &&
+               !value.propertyIsEnumerable('call'))) {
         return 'function';
       }
     } else {
@@ -19313,8 +19767,8 @@ goog.mixin = function(target, source) {
  *     between midnight, January 1, 1970 and the current time.
  */
 goog.now = (goog.TRUSTED_SITE && Date.now) || (function() {
-  return +new Date();
-});
+             return +new Date();
+           });
 /**
  * Evals JavaScript in the global scope.  In IE this uses execScript, other
  * browsers use goog.global.eval. If goog.global.eval does not evaluate in the
@@ -19343,8 +19797,8 @@ goog.globalEval = function(script) {
     } else {
       /** @type {Document} */
       var doc = goog.global.document;
-      var scriptElt = /** @type {!HTMLScriptElement} */ (
-          doc.createElement('SCRIPT'));
+      var scriptElt =
+          /** @type {!HTMLScriptElement} */ (doc.createElement('SCRIPT'));
       scriptElt.type = 'text/javascript';
       scriptElt.defer = false;
       scriptElt.appendChild(doc.createTextNode(script));
@@ -19410,6 +19864,11 @@ goog.cssNameMappingStyle_;
  *     the modifier.
  */
 goog.getCssName = function(className, opt_modifier) {
+  if (String(className).charAt(0) == '.') {
+    throw new Error(
+        'className passed in goog.getCssName must not start with ".".' +
+        ' You passed: ' + className);
+  }
   var getMapping = function(cssName) {
     return goog.cssNameMapping_[cssName] || cssName;
   };
@@ -19423,18 +19882,19 @@ goog.getCssName = function(className, opt_modifier) {
   };
   var rename;
   if (goog.cssNameMapping_) {
-    rename = goog.cssNameMappingStyle_ == 'BY_WHOLE' ?
-        getMapping : renameByParts;
+    rename =
+        goog.cssNameMappingStyle_ == 'BY_WHOLE' ? getMapping : renameByParts;
   } else {
     rename = function(a) {
       return a;
     };
   }
-  if (opt_modifier) {
-    return className + '-' + rename(opt_modifier);
-  } else {
-    return rename(className);
+  var result =
+      opt_modifier ? className + '-' + rename(opt_modifier) : rename(className);
+  if (goog.global.CLOSURE_CSS_NAME_MAP_FN) {
+    return goog.global.CLOSURE_CSS_NAME_MAP_FN(result);
   }
+  return result;
 };
 /**
  * Sets the map to check when returning a value from goog.getCssName(). Example:
@@ -19491,6 +19951,10 @@ if (!COMPILED && goog.global.CLOSURE_CSS_NAME_MAPPING) {
  * var MSG_NAME = goog.getMsg('Hello {$placeholder}', {'placeholder': 'world'});
  * </code>
  *
+ * This function produces a string which should be treated as plain text. Use
+ * {@link goog.html.SafeHtmlFormatter} in conjunction with goog.getMsg to
+ * produce SafeHtml.
+ *
  * @param {string} str Translatable string, places holders in the form {$foo}.
  * @param {Object<string, string>=} opt_values Maps place holder name to value.
  * @return {string} message with placeholders filled.
@@ -19498,8 +19962,8 @@ if (!COMPILED && goog.global.CLOSURE_CSS_NAME_MAPPING) {
 goog.getMsg = function(str, opt_values) {
   if (opt_values) {
     str = str.replace(/\{\$([^}]+)}/g, function(match, key) {
-      return (opt_values != null && key in opt_values) ?
-          opt_values[key] : match;
+      return (opt_values != null && key in opt_values) ? opt_values[key] :
+                                                         match;
     });
   }
   return str;
@@ -19638,9 +20102,10 @@ goog.inherits = function(childCtor, parentCtor) {
 goog.base = function(me, opt_methodName, var_args) {
   var caller = arguments.callee.caller;
   if (goog.STRICT_MODE_COMPATIBLE || (goog.DEBUG && !caller)) {
-    throw Error('arguments.caller not defined.  goog.base() cannot be used ' +
-                'with strict mode code. See ' +
-                'http://www.ecma-international.org/ecma-262/5.1/#sec-C');
+    throw Error(
+        'arguments.caller not defined.  goog.base() cannot be used ' +
+        'with strict mode code. See ' +
+        'http://www.ecma-international.org/ecma-262/5.1/#sec-C');
   }
   if (caller.superClass_) {
     var ctorArgs = new Array(arguments.length - 1);
@@ -19654,8 +20119,8 @@ goog.base = function(me, opt_methodName, var_args) {
     args[i - 2] = arguments[i];
   }
   var foundCaller = false;
-  for (var ctor = me.constructor;
-       ctor; ctor = ctor.superClass_ && ctor.superClass_.constructor) {
+  for (var ctor = me.constructor; ctor;
+       ctor = ctor.superClass_ && ctor.superClass_.constructor) {
     if (ctor.prototype[opt_methodName] === caller) {
       foundCaller = true;
     } else if (foundCaller) {
@@ -19682,6 +20147,9 @@ goog.base = function(me, opt_methodName, var_args) {
  *     (e.g. "var Timer = goog.Timer").
  */
 goog.scope = function(fn) {
+  if (goog.isInModuleLoader_()) {
+    throw Error('goog.scope is not supported within a goog.module.');
+  }
   fn.call(goog.global);
 };
 /*
@@ -19747,12 +20215,14 @@ goog.defineClass = function(superClass, def) {
  *   constructor: (!Function|undefined),
  *   statics: (Object|undefined|function(Function):void)
  * }}
- * @suppress {missingProvide}
  */
 goog.defineClass.ClassDescriptor;
 /**
- * @define {boolean} Whether the instances returned by
- * goog.defineClass should be sealed when possible.
+ * @define {boolean} Whether the instances returned by goog.defineClass should
+ *     be sealed when possible.
+ *
+ * When sealing is disabled the constructor function will not be wrapped by
+ * goog.defineClass, making it incompatible with ES6 class methods.
  */
 goog.define('goog.defineClass.SEAL_CLASS_INSTANCES', goog.DEBUG);
 /**
@@ -19766,27 +20236,34 @@ goog.define('goog.defineClass.SEAL_CLASS_INSTANCES', goog.DEBUG);
  * @private
  */
 goog.defineClass.createSealingConstructor_ = function(ctr, superClass) {
-  if (goog.defineClass.SEAL_CLASS_INSTANCES &&
-      Object.seal instanceof Function) {
-    if (superClass && superClass.prototype &&
-        superClass.prototype[goog.UNSEALABLE_CONSTRUCTOR_PROPERTY_]) {
-      return ctr;
-    }
-    /**
-     * @this {Object}
-     * @return {?}
-     */
-    var wrappedCtr = function() {
-      var instance = ctr.apply(this, arguments) || this;
-      instance[goog.UID_PROPERTY_] = instance[goog.UID_PROPERTY_];
-      if (this.constructor === wrappedCtr) {
-        Object.seal(instance);
-      }
-      return instance;
-    };
-    return wrappedCtr;
+  if (!goog.defineClass.SEAL_CLASS_INSTANCES) {
+    return ctr;
   }
-  return ctr;
+  var superclassSealable = !goog.defineClass.isUnsealable_(superClass);
+  /**
+   * @this {Object}
+   * @return {?}
+   */
+  var wrappedCtr = function() {
+    var instance = ctr.apply(this, arguments) || this;
+    instance[goog.UID_PROPERTY_] = instance[goog.UID_PROPERTY_];
+    if (this.constructor === wrappedCtr && superclassSealable &&
+        Object.seal instanceof Function) {
+      Object.seal(instance);
+    }
+    return instance;
+  };
+  return wrappedCtr;
+};
+/**
+ * @param {Function} ctr The constructor to test.
+ * @return {boolean} Whether the constructor has been tagged as unsealable
+ *     using goog.tagUnsealableClass.
+ * @private
+ */
+goog.defineClass.isUnsealable_ = function(ctr) {
+  return ctr && ctr.prototype &&
+      ctr.prototype[goog.UNSEALABLE_CONSTRUCTOR_PROPERTY_];
 };
 /**
  * The names of the fields that are defined on Object.prototype.
@@ -19795,13 +20272,8 @@ goog.defineClass.createSealingConstructor_ = function(ctr, superClass) {
  * @const
  */
 goog.defineClass.OBJECT_PROTOTYPE_FIELDS_ = [
-  'constructor',
-  'hasOwnProperty',
-  'isPrototypeOf',
-  'propertyIsEnumerable',
-  'toLocaleString',
-  'toString',
-  'valueOf'
+  'constructor', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable',
+  'toLocaleString', 'toString', 'valueOf'
 ];
 /**
  * @param {!Object} target The object to add properties to.
@@ -19824,7 +20296,7 @@ goog.defineClass.applyProperties_ = function(target, source) {
 };
 /**
  * Sealing classes breaks the older idiom of assigning properties on the
- * prototype rather than in the constructor.  As such, goog.defineClass
+ * prototype rather than in the constructor. As such, goog.defineClass
  * must not seal subclasses of these old-style classes until they are fixed.
  * Until then, this marks a class as "broken", instructing defineClass
  * not to seal subclasses.
@@ -19840,6 +20312,72 @@ goog.tagUnsealableClass = function(ctr) {
  * @const @private {string}
  */
 goog.UNSEALABLE_CONSTRUCTOR_PROPERTY_ = 'goog_defineClass_legacy_unsealable';
+/**
+ * Returns a newly created map from language mode string to a boolean
+ * indicating whether transpilation should be done for that mode.
+ *
+ * Guaranteed invariant:
+ * For any two modes, l1 and l2 where l2 is a newer mode than l1,
+ * `map[l1] == true` implies that `map[l2] == true`.
+ * @private
+ * @return {!Object<string, boolean>}
+ */
+goog.createRequiresTranspilation_ = function() {
+  var /** !Object<string, boolean> */ requiresTranspilation = {'es3': false};
+  var transpilationRequiredForAllLaterModes = false;
+  /**
+   * Adds an entry to requiresTranspliation for the given language mode.
+   *
+   * IMPORTANT: Calls must be made in order from oldest to newest language
+   * mode.
+   * @param {string} modeName
+   * @param {function(): boolean} isSupported Returns true if the JS engine
+   *     supports the given mode.
+   */
+  function addNewerLanguageTranspilationCheck(modeName, isSupported) {
+    if (transpilationRequiredForAllLaterModes) {
+      requiresTranspilation[modeName] = true;
+    } else if (isSupported()) {
+      requiresTranspilation[modeName] = false;
+    } else {
+      requiresTranspilation[modeName] = true;
+      transpilationRequiredForAllLaterModes = true;
+    }
+  }
+  /**
+   * Does the given code evaluate without syntax errors and return a truthy
+   * result?
+   */
+  function /** boolean */ evalCheck(/** string */ code) {
+    try {
+      return !!eval(code);
+    } catch (ignored) {
+      return false;
+    }
+  }
+  addNewerLanguageTranspilationCheck('es5', function() {
+    return evalCheck('[1,].length==1');
+  });
+  addNewerLanguageTranspilationCheck('es6', function() {
+    var es6fullTest =
+        'class X{constructor(){if(new.target!=String)throw 1;this.x=42}}' +
+        'let q=Reflect.construct(X,[],String);if(q.x!=42||!(q instanceof ' +
+        'String))throw 1;for(const a of[2,3]){if(a==2)continue;function ' +
+        'f(z={a}){let a=0;return z.a}{function f(){return 0;}}return f()' +
+        '==3}';
+    return evalCheck('(()=>{"use strict";' + es6fullTest + '})()');
+  });
+  addNewerLanguageTranspilationCheck('es6-impl', function() {
+    return true;
+  });
+  addNewerLanguageTranspilationCheck('es7', function() {
+    return evalCheck('2 ** 2 == 4');
+  });
+  addNewerLanguageTranspilationCheck('es8', function() {
+    return evalCheck('async () => 1, true');
+  });
+  return requiresTranspilation;
+};
 goog.provide('atlas');
 goog.provide('atlas.Data');
 goog.provide('atlas.Page');
@@ -20228,15 +20766,23 @@ spine.Color.prototype.b = 1;
 spine.Color.prototype.a = 1;
 /**
  * @return {spine.Color}
+ * @param {spine.Color} color
+ * @param {spine.Color=} out
+ */
+spine.Color.copy = function(color, out) {
+  out = out || new spine.Color();
+  out.r = color.r;
+  out.g = color.g;
+  out.b = color.b;
+  out.a = color.a;
+  return out;
+}
+/**
+ * @return {spine.Color}
  * @param {spine.Color} other
  */
 spine.Color.prototype.copy = function(other) {
-  var color = this;
-  color.r = other.r;
-  color.g = other.g;
-  color.b = other.b;
-  color.a = other.a;
-  return color;
+  return spine.Color.copy(other, this);
 }
 /**
  * @return {spine.Color}
@@ -20268,6 +20814,30 @@ spine.Color.prototype.load = function(json) {
 spine.Color.prototype.toString = function() {
   var color = this;
   return "rgba(" + (color.r * 255).toFixed(0) + "," + (color.g * 255).toFixed(0) + "," + (color.b * 255).toFixed(0) + "," + color.a + ")";
+}
+/**
+ * @return {spine.Color}
+ * @param {spine.Color} a
+ * @param {spine.Color} b
+ * @param {number} pct
+ * @param {spine.Color=} out
+ */
+spine.Color.tween = function(a, b, pct, out) {
+  out = out || new spine.Color();
+  out.r = spine.tween(a.r, b.r, pct);
+  out.g = spine.tween(a.g, b.g, pct);
+  out.b = spine.tween(a.b, b.b, pct);
+  out.a = spine.tween(a.a, b.a, pct);
+  return out;
+}
+/**
+ * @return {spine.Color}
+ * @param {spine.Color} other
+ * @param {number} pct
+ * @param {spine.Color=} out
+ */
+spine.Color.prototype.tween = function(other, pct, out) {
+  return spine.Color.tween(this, other, pct, out);
 }
 /**
  * @return {function(number):number}
@@ -20400,9 +20970,7 @@ spine.StepBezierCurve = function(cx1, cy1, cx2, cy2) {
  * @constructor
  */
 spine.Curve = function() {}
-/**
- * @type {function(number):number}
- */
+/** @type {function(number):number} */
 spine.Curve.prototype.evaluate = function(t) {
   return t;
 };
@@ -20483,42 +21051,104 @@ spine.tweenAngle = function(a, b, t) {
 spine.Angle = function(rad) {
   this.rad = rad || 0;
 }
-Object.defineProperty(spine.Angle.prototype, 'deg', {
+/** @type {number} */
+spine.Angle.prototype._rad = 0;
+/** @type {number} */
+spine.Angle.prototype._cos = 1;
+/** @type {number} */
+spine.Angle.prototype._sin = 0;
+/** @type {number} */
+spine.Angle.prototype.rad;
+Object.defineProperty(spine.Angle.prototype, 'rad', {
   /** @this {spine.Angle} */
-  get: function() {
-    return this.rad * 180 / Math.PI;
-  },
+  get: function() { return this._rad; },
   /** @this {spine.Angle} */
   set: function(value) {
-    this.rad = value * Math.PI / 180;
+    if (this._rad !== value) {
+      this._rad = value;
+      this._cos = Math.cos(value);
+      this._sin = Math.sin(value);
+    }
   }
 });
+/** @type {number} */
+spine.Angle.prototype.deg;
+Object.defineProperty(spine.Angle.prototype, 'deg', {
+  /** @this {spine.Angle} */
+  get: function() { return this.rad * 180 / Math.PI; },
+  /** @this {spine.Angle} */
+  set: function(value) { this.rad = value * Math.PI / 180; }
+});
+/** @type {number} */
+spine.Angle.prototype.cos;
 Object.defineProperty(spine.Angle.prototype, 'cos', {
   /** @this {spine.Angle} */
-  get: function() {
-    return Math.cos(this.rad);
-  }
+  get: function() { return this._cos; }
 });
+/** @type {number} */
+spine.Angle.prototype.sin;
 Object.defineProperty(spine.Angle.prototype, 'sin', {
   /** @this {spine.Angle} */
-  get: function() {
-    return Math.sin(this.rad);
-  }
+  get: function() { return this._sin; }
 });
 /**
  * @return {spine.Angle}
+ * @param {spine.Angle} angle
+ * @param {spine.Angle=} out
  */
-spine.Angle.prototype.selfIdentity = function() {
-  this.rad = 0;
-  return this;
+spine.Angle.copy = function(angle, out) {
+  out = out || new spine.Angle();
+  out._rad = angle._rad;
+  out._cos = angle._cos;
+  out._sin = angle._sin;
+  return out;
 }
 /**
  * @return {spine.Angle}
  * @param {spine.Angle} other
  */
 spine.Angle.prototype.copy = function(other) {
-  this.rad = other.rad;
-  return this;
+  return spine.Angle.copy(other, this);
+}
+/**
+ * @return {boolean}
+ * @param {spine.Angle} a
+ * @param {spine.Angle} b
+ * @param {number=} epsilon
+ */
+spine.Angle.equal = function(a, b, epsilon) {
+  epsilon = epsilon || 1e-6;
+  if (Math.abs(spine.wrapAngleRadians(a.rad - b.rad)) > epsilon) { return false; }
+  return true;
+}
+/**
+ * @return {boolean}
+ * @param {spine.Angle} other
+ * @param {number=} epsilon
+ */
+spine.Angle.prototype.equal = function(other, epsilon) {
+  return spine.Angle.equal(this, other, epsilon);
+}
+/**
+ * @return {spine.Angle}
+ * @param {spine.Angle} a
+ * @param {spine.Angle} b
+ * @param {number} pct
+ * @param {spine.Angle=} out
+ */
+spine.Angle.tween = function(a, b, pct, out) {
+  out = out || new spine.Angle();
+  out.rad = spine.tweenAngle(a.rad, b.rad, pct);
+  return out;
+}
+/**
+ * @return {spine.Angle}
+ * @param {spine.Angle} other
+ * @param {number} pct
+ * @param {spine.Angle=} out
+ */
+spine.Angle.prototype.tween = function(other, pct, out) {
+  return spine.Angle.tween(this, other, pct, out);
 }
 /**
  * @constructor
@@ -20535,12 +21165,21 @@ spine.Vector.prototype.x = 0;
 spine.Vector.prototype.y = 0;
 /**
  * @return {spine.Vector}
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
+ */
+spine.Vector.copy = function(v, out) {
+  out = out || new spine.Vector();
+  out.x = v.x;
+  out.y = v.y;
+  return out;
+}
+/**
+ * @return {spine.Vector}
  * @param {spine.Vector} other
  */
 spine.Vector.prototype.copy = function(other) {
-  this.x = other.x;
-  this.y = other.y;
-  return this;
+  return spine.Vector.copy(other, this);
 }
 /**
  * @return {boolean}
@@ -20550,13 +21189,28 @@ spine.Vector.prototype.copy = function(other) {
  */
 spine.Vector.equal = function(a, b, epsilon) {
   epsilon = epsilon || 1e-6;
-  if (Math.abs(a.x - b.x) > epsilon) {
-    return false;
-  }
-  if (Math.abs(a.y - b.y) > epsilon) {
-    return false;
-  }
+  if (Math.abs(a.x - b.x) > epsilon) { return false; }
+  if (Math.abs(a.y - b.y) > epsilon) { return false; }
   return true;
+}
+/**
+ * @return {boolean}
+ * @param {spine.Vector} other
+ * @param {number=} epsilon
+ */
+spine.Vector.prototype.equal = function(other, epsilon) {
+  return spine.Vector.equal(this, other, epsilon);
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
+ */
+spine.Vector.negate = function(v, out) {
+  out = out || new spine.Vector();
+  out.x = -v.x;
+  out.y = -v.y;
+  return out;
 }
 /**
  * @return {spine.Vector}
@@ -20591,6 +21245,35 @@ spine.Vector.prototype.selfAdd = function(other) {
  * @return {spine.Vector}
  * @param {spine.Vector} a
  * @param {spine.Vector} b
+ * @param {spine.Vector=} out
+ */
+spine.Vector.subtract = function(a, b, out) {
+  out = out || new spine.Vector();
+  out.x = a.x - b.x;
+  out.y = a.y - b.y;
+  return out;
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Vector} other
+ * @param {spine.Vector=} out
+ */
+spine.Vector.prototype.subtract = function(other, out) {
+  return spine.Vector.subtract(this, other, out);
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Vector} other
+ */
+spine.Vector.prototype.selfSubtract = function(other) {
+  this.x -= other.x;
+  this.y -= other.y;
+  return this;
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Vector} a
+ * @param {spine.Vector} b
  * @param {number} pct
  * @param {spine.Vector=} out
  */
@@ -20610,12 +21293,323 @@ spine.Vector.prototype.tween = function(other, pct, out) {
   return spine.Vector.tween(this, other, pct, out);
 }
 /**
- * @return {spine.Vector}
- * @param {spine.Vector} other
- * @param {number} pct
+ * @constructor
  */
-spine.Vector.prototype.selfTween = function(other, pct) {
-  return spine.Vector.tween(this, other, pct, this);
+spine.Matrix = function() {}
+/** @type {number} */
+spine.Matrix.prototype.a = 1;
+/** @type {number} */
+spine.Matrix.prototype.b = 0;
+/** @type {number} */
+spine.Matrix.prototype.c = 0;
+/** @type {number} */
+spine.Matrix.prototype.d = 1;
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} m
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.copy = function(m, out) {
+  out = out || new spine.Matrix();
+  out.a = m.a;
+  out.b = m.b;
+  out.c = m.c;
+  out.d = m.d;
+  return out;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} other
+ */
+spine.Matrix.prototype.copy = function(other) {
+  return spine.Matrix.copy(other, this);
+}
+/**
+ * @return {boolean}
+ * @param {spine.Matrix} a
+ * @param {spine.Matrix} b
+ * @param {number=} epsilon
+ */
+spine.Matrix.equal = function(a, b, epsilon) {
+  epsilon = epsilon || 1e-6;
+  if (Math.abs(a.a - b.a) > epsilon) { return false; }
+  if (Math.abs(a.b - b.b) > epsilon) { return false; }
+  if (Math.abs(a.c - b.c) > epsilon) { return false; }
+  if (Math.abs(a.d - b.d) > epsilon) { return false; }
+  return true;
+}
+/**
+ * @return {boolean}
+ * @param {spine.Matrix} other
+ * @param {number=} epsilon
+ */
+spine.Matrix.prototype.equal = function(other, epsilon) {
+  return spine.Matrix.equal(this, other, epsilon);
+}
+/**
+ * @return {number}
+ * @param {spine.Matrix} m
+ */
+spine.Matrix.determinant = function(m) {
+  return m.a * m.d - m.b * m.c;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.identity = function(out) {
+  out = out || new spine.Matrix();
+  out.a = 1; out.b = 0;
+  out.c = 0; out.d = 1;
+  return out;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} a
+ * @param {spine.Matrix} b
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.multiply = function(a, b, out) {
+  out = out || new spine.Matrix();
+  var a_a = a.a, a_b = a.b, a_c = a.c, a_d = a.d;
+  var b_a = b.a, b_b = b.b, b_c = b.c, b_d = b.d;
+  out.a = a_a * b_a + a_b * b_c;
+  out.b = a_a * b_b + a_b * b_d;
+  out.c = a_c * b_a + a_d * b_c;
+  out.d = a_c * b_b + a_d * b_d;
+  return out;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} m
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.invert = function(m, out) {
+  out = out || new spine.Matrix();
+  var a = m.a, b = m.b, c = m.c, d = m.d;
+  var inv_det = 1 / (a * d - b * c);
+  out.a = inv_det * d;
+  out.b = -inv_det * b;
+  out.c = -inv_det * c;
+  out.d = inv_det * a;
+  return out;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} a
+ * @param {spine.Matrix} b
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.combine = function(a, b, out) {
+  return spine.Matrix.multiply(a, b, out);
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} ab
+ * @param {spine.Matrix} a
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.extract = function(ab, a, out) {
+  return spine.Matrix.multiply(spine.Matrix.invert(a, out), ab, out);
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} m
+ * @param {number} cos
+ * @param {number} sin
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.rotate = function(m, cos, sin, out) {
+  out = out || new spine.Matrix();
+  var a = m.a, b = m.b, c = m.c, d = m.d;
+  out.a = a * cos + b * sin; out.b = b * cos - a * sin;
+  out.c = c * cos + d * sin; out.d = d * cos - c * sin;
+  return out;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} m
+ * @param {number} x
+ * @param {number} y
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.scale = function(m, x, y, out) {
+  out = out || new spine.Matrix();
+  out.a = m.a * x; out.b = m.b * y;
+  out.c = m.c * x; out.d = m.d * y;
+  return out;
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Matrix} m
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
+ */
+spine.Matrix.transform = function(m, v, out) {
+  out = out || new spine.Vector();
+  var x = v.x, y = v.y;
+  out.x = m.a * x + m.b * y;
+  out.y = m.c * x + m.d * y;
+  return out;
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Matrix} m
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
+ */
+spine.Matrix.untransform = function(m, v, out) {
+  out = out || new spine.Vector();
+  var a = m.a, b = m.b, c = m.c, d = m.d;
+  var x = v.x, y = v.y;
+  var inv_det = 1 / (a * d - b * c);
+  out.x = inv_det * (d * x - b * y);
+  out.y = inv_det * (a * y - c * x);
+  return out;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} a
+ * @param {spine.Matrix} b
+ * @param {number} pct
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.tween = function(a, b, pct, out) {
+  out = out || new spine.Matrix();
+  out.a = spine.tween(a.a, b.a, pct);
+  out.b = spine.tween(a.b, b.b, pct);
+  out.c = spine.tween(a.c, b.c, pct);
+  out.d = spine.tween(a.d, b.d, pct);
+  return out;
+}
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix} other
+ * @param {number} pct
+ * @param {spine.Matrix=} out
+ */
+spine.Matrix.prototype.tween = function(other, pct, out) {
+  return spine.Matrix.tween(this, other, pct, out);
+}
+/**
+ * @constructor
+ */
+spine.Affine = function() {
+  var affine = this;
+  affine.vector = new spine.Vector();
+  affine.matrix = new spine.Matrix();
+}
+/** @type {spine.Vector} */
+spine.Affine.prototype.vector;
+/** @type {spine.Matrix} */
+spine.Affine.prototype.matrix;
+/**
+ * @return {spine.Affine}
+ * @param {spine.Affine} affine
+ * @param {spine.Affine=} out
+ */
+spine.Affine.copy = function(affine, out) {
+  out = out || new spine.Affine();
+  spine.Vector.copy(affine.vector, out.vector);
+  spine.Matrix.copy(affine.matrix, out.matrix);
+  return out;
+}
+/**
+ * @return {spine.Affine}
+ * @param {spine.Affine} other
+ */
+spine.Affine.prototype.copy = function(other) {
+  return spine.Affine.copy(other, this);
+}
+/**
+ * @return {boolean}
+ * @param {spine.Affine} a
+ * @param {spine.Affine} b
+ * @param {number=} epsilon
+ */
+spine.Affine.equal = function(a, b, epsilon) {
+  if (!a.vector.equal(b.vector, epsilon)) { return false; }
+  if (!a.matrix.equal(b.matrix, epsilon)) { return false; }
+  return true;
+}
+/**
+ * @return {boolean}
+ * @param {spine.Affine} other
+ * @param {number=} epsilon
+ */
+spine.Affine.prototype.equal = function(other, epsilon) {
+  return spine.Affine.equal(this, other, epsilon);
+}
+/**
+ * @return {spine.Affine}
+ * @param {spine.Affine=} out
+ */
+spine.Affine.identity = function(out) {
+  out = out || new spine.Affine();
+  spine.Matrix.identity(out.matrix);
+  out.vector.x = 0;
+  out.vector.y = 0;
+  return out;
+}
+/**
+ * @return {spine.Affine}
+ * @param {spine.Affine} affine
+ * @param {spine.Affine=} out
+ */
+spine.Affine.invert = function(affine, out) {
+  out = out || new spine.Affine();
+  spine.Matrix.invert(affine.matrix, out.matrix);
+  spine.Vector.negate(affine.vector, out.vector);
+  spine.Matrix.transform(out.matrix, out.vector, out.vector);
+  return out;
+}
+/**
+ * @return {spine.Affine}
+ * @param {spine.Affine} a
+ * @param {spine.Affine} b
+ * @param {spine.Affine=} out
+ */
+spine.Affine.combine = function(a, b, out) {
+  out = out || new spine.Affine();
+  spine.Affine.transform(a, b.vector, out.vector);
+  spine.Matrix.combine(a.matrix, b.matrix, out.matrix);
+  return out;
+}
+/**
+ * @return {spine.Affine}
+ * @param {spine.Affine} ab
+ * @param {spine.Affine} a
+ * @param {spine.Affine=} out
+ */
+spine.Affine.extract = function(ab, a, out) {
+  out = out || new spine.Affine();
+  spine.Matrix.extract(ab.matrix, a.matrix, out.matrix);
+  spine.Affine.untransform(a, ab.vector, out.vector);
+  return out;
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Affine} affine
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
+ */
+spine.Affine.transform = function(affine, v, out) {
+  out = out || new spine.Vector();
+  spine.Matrix.transform(affine.matrix, v, out);
+  spine.Vector.add(affine.vector, out, out);
+  return out;
+}
+/**
+ * @return {spine.Vector}
+ * @param {spine.Affine} affine
+ * @param {spine.Vector} v
+ * @param {spine.Vector=} out
+ */
+spine.Affine.untransform = function(affine, v, out) {
+  out = out || new spine.Vector();
+  spine.Vector.subtract(v, affine.vector, out);
+  spine.Matrix.untransform(affine.matrix, out, out);
+  return out;
 }
 /**
  * @constructor
@@ -20631,23 +21625,130 @@ goog.inherits(spine.Position, spine.Vector);
  */
 spine.Rotation = function() {
   goog.base(this, 0);
+  this.matrix = new spine.Matrix();
 }
 goog.inherits(spine.Rotation, spine.Angle);
+/** @type {spine.Matrix} */
+spine.Rotation.prototype.matrix;
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix=} m
+ */
+spine.Rotation.prototype.updateMatrix = function(m) {
+  var rotation = this;
+  m = m || this.matrix;
+  m.a = rotation.cos; m.b = -rotation.sin;
+  m.c = rotation.sin; m.d = rotation.cos;
+  return m;
+}
 /**
  * @constructor
- * @extends {spine.Vector}
+ * @extends {spine.Matrix}
  */
 spine.Scale = function() {
-  goog.base(this, 1, 1);
+  goog.base(this);
 }
-goog.inherits(spine.Scale, spine.Vector);
+goog.inherits(spine.Scale, spine.Matrix);
+spine.signum = function(n) { return (n < 0)?(-1):(n > 0)?(1):(n); }
+/** @type {number} */
+spine.Scale.prototype.x;
+Object.defineProperty(spine.Scale.prototype, 'x', {
+  /** @this {spine.Scale} */
+  get: function() { return (this.c == 0)?(this.a):(spine.signum(this.a) * Math.sqrt(this.a * this.a + this.c * this.c)); },
+  /** @this {spine.Scale} */
+  set: function(value) { this.a = value; this.c = 0; }
+});
+/** @type {number} */
+spine.Scale.prototype.y;
+Object.defineProperty(spine.Scale.prototype, 'y', {
+  /** @this {spine.Scale} */
+  get: function() { return (this.b == 0)?(this.d):(spine.signum(this.d) * Math.sqrt(this.b * this.b + this.d * this.d)); },
+  /** @this {spine.Scale} */
+  set: function(value) { this.b = 0; this.d = value; }
+});
 /**
- * @return {spine.Scale}
+ * @constructor
  */
-spine.Scale.prototype.selfIdentity = function() {
-  this.x = 1;
-  this.y = 1;
-  return this;
+spine.Shear = function() {
+  this.x = new spine.Angle();
+  this.y = new spine.Angle();
+  this.matrix = new spine.Matrix();
+}
+/** @type {spine.Angle} */
+spine.Shear.prototype.x;
+/** @type {spine.Angle} */
+spine.Shear.prototype.y;
+/** @type {spine.Matrix} */
+spine.Shear.prototype.matrix;
+/**
+ * @return {spine.Matrix}
+ * @param {spine.Matrix=} m
+ */
+spine.Shear.prototype.updateMatrix = function(m) {
+  var shear = this;
+  m = m || this.matrix;
+  m.a = shear.x.cos; m.b = -shear.y.sin;
+  m.c = shear.x.sin; m.d = shear.y.cos;
+  return m;
+}
+/**
+ * @return {spine.Shear}
+ * @param {spine.Shear} shear
+ * @param {spine.Shear=} out
+ */
+spine.Shear.copy = function(shear, out) {
+  out = out || new spine.Shear();
+  out.x.copy(shear.x);
+  out.y.copy(shear.y);
+  return out;
+}
+/**
+ * @return {spine.Shear}
+ * @param {spine.Shear} other
+ */
+spine.Shear.prototype.copy = function(other) {
+  return spine.Shear.copy(other, this);
+}
+/**
+ * @return {boolean}
+ * @param {spine.Shear} a
+ * @param {spine.Shear} b
+ * @param {number=} epsilon
+ */
+spine.Shear.equal = function(a, b, epsilon) {
+  if (!a.x.equal(b.x, epsilon)) { return false; }
+  if (!a.y.equal(b.y, epsilon)) { return false; }
+  return true;
+}
+/**
+ * @return {boolean}
+ * @param {spine.Shear} other
+ * @param {number=} epsilon
+ */
+spine.Shear.prototype.equal = function(other, epsilon) {
+  return spine.Shear.equal(this, other, epsilon);
+}
+/**
+ * @return {spine.Shear}
+ * @param {spine.Shear} a
+ * @param {spine.Shear} b
+ * @param {number} pct
+ * @param {spine.Shear=} out
+ */
+spine.Shear.tween = function(a, b, pct, out) {
+  out = out || new spine.Shear();
+  spine.Angle.tween(a.x, b.x, pct, out.x);
+  spine.Angle.tween(a.y, b.y, pct, out.y);
+  return out;
+}
+/**
+ * @return {spine.Shear}
+ * @param {spine.Shear} other
+ * @param {number} pct
+ * @param {spine.Shear=} out
+ */
+spine.Shear.prototype.tween = function(other, pct, out) {
+  return spine.Shear.tween(this, other, pct, out);
 }
 /**
  * @constructor
@@ -20657,6 +21758,20 @@ spine.Space = function() {
   space.position = new spine.Position();
   space.rotation = new spine.Rotation();
   space.scale = new spine.Scale();
+  space.shear = new spine.Shear();
+  space.affine = new spine.Affine();
+}
+/**
+ * @return {spine.Affine}
+ * @param {spine.Affine=} affine
+ */
+spine.Space.prototype.updateAffine = function(affine) {
+  affine = affine || this.affine;
+  spine.Vector.copy(this.position, affine.vector);
+  spine.Matrix.copy(this.rotation.updateMatrix(), affine.matrix);
+  spine.Matrix.multiply(affine.matrix, this.shear.updateMatrix(), affine.matrix);
+  spine.Matrix.multiply(affine.matrix, this.scale, affine.matrix);
+  return affine;
 }
 /** @type {spine.Position} */
 spine.Space.prototype.position;
@@ -20664,16 +21779,29 @@ spine.Space.prototype.position;
 spine.Space.prototype.rotation;
 /** @type {spine.Scale} */
 spine.Space.prototype.scale;
+/** @type {spine.Shear} */
+spine.Space.prototype.shear;
+/** @type {spine.Affine} */
+spine.Space.prototype.affine;
+/**
+ * @return {spine.Space}
+ * @param {spine.Space} space
+ * @param {spine.Space=} out
+ */
+spine.Space.copy = function(space, out) {
+  out = out || new spine.Space();
+  out.position.copy(space.position);
+  out.rotation.copy(space.rotation);
+  out.scale.copy(space.scale);
+  out.shear.copy(space.shear);
+  return out;
+}
 /**
  * @return {spine.Space}
  * @param {spine.Space} other
  */
 spine.Space.prototype.copy = function(other) {
-  var space = this;
-  space.position.copy(other.position);
-  space.rotation.copy(other.rotation);
-  space.scale.copy(other.scale);
-  return space;
+  return spine.Space.copy(other, this);
 }
 /**
  * @return {spine.Space}
@@ -20686,6 +21814,8 @@ spine.Space.prototype.load = function(json) {
   space.rotation.deg = spine.loadFloat(json, 'rotation', 0);
   space.scale.x = spine.loadFloat(json, 'scaleX', 1);
   space.scale.y = spine.loadFloat(json, 'scaleY', 1);
+  space.shear.x.deg = spine.loadFloat(json, 'shearX', 0);
+  space.shear.y.deg = spine.loadFloat(json, 'shearY', 0);
   return space;
 }
 /**
@@ -20696,22 +21826,19 @@ spine.Space.prototype.load = function(json) {
  */
 spine.Space.equal = function(a, b, epsilon) {
   epsilon = epsilon || 1e-6;
-  if (Math.abs(a.position.x - b.position.x) > epsilon) {
-    return false;
-  }
-  if (Math.abs(a.position.y - b.position.y) > epsilon) {
-    return false;
-  }
-  if (Math.abs(a.rotation.rad - b.rotation.rad) > epsilon) {
-    return false;
-  }
-  if (Math.abs(a.scale.x - b.scale.x) > epsilon) {
-    return false;
-  }
-  if (Math.abs(a.scale.y - b.scale.y) > epsilon) {
-    return false;
-  }
+  if (!a.position.equal(b.position, epsilon)) { return false; }
+  if (!a.rotation.equal(b.rotation, epsilon)) { return false; }
+  if (!a.scale.equal(b.scale, epsilon)) { return false; }
+  if (!a.shear.equal(b.shear, epsilon)) { return false; }
   return true;
+}
+/**
+ * @return {boolean}
+ * @param {spine.Space} other
+ * @param {number=} epsilon
+ */
+spine.Space.prototype.equal = function(other, epsilon) {
+  return spine.Space.equal(this, other, epsilon);
 }
 /**
  * @return {spine.Space}
@@ -20724,6 +21851,8 @@ spine.Space.identity = function(out) {
   out.rotation.rad = 0;
   out.scale.x = 1;
   out.scale.y = 1;
+  out.shear.x.rad = 0;
+  out.shear.y.rad = 0;
   return out;
 }
 /**
@@ -20733,15 +21862,7 @@ spine.Space.identity = function(out) {
  * @param {number} y
  */
 spine.Space.translate = function(space, x, y) {
-  x *= space.scale.x;
-  y *= space.scale.y;
-  var rad = space.rotation.rad;
-  var c = Math.cos(rad);
-  var s = Math.sin(rad);
-  var tx = c * x - s * y;
-  var ty = s * x + c * y;
-  space.position.x += tx;
-  space.position.y += ty;
+  spine.Space.transform(space, new spine.Vector(x, y), space.position);
   return space;
 }
 /**
@@ -20750,8 +21871,11 @@ spine.Space.translate = function(space, x, y) {
  * @param {number} rad
  */
 spine.Space.rotate = function(space, rad) {
-  space.rotation.rad += rad;
-  space.rotation.rad = spine.wrapAngleRadians(space.rotation.rad);
+  if (spine.Matrix.determinant(space.scale) < 0.0) {
+    space.rotation.rad = spine.wrapAngleRadians(space.rotation.rad - rad);
+  } else {
+    space.rotation.rad = spine.wrapAngleRadians(space.rotation.rad + rad);
+  }
   return space;
 }
 /**
@@ -20761,8 +21885,7 @@ spine.Space.rotate = function(space, rad) {
  * @param {number} y
  */
 spine.Space.scale = function(space, x, y) {
-  space.scale.x *= x;
-  space.scale.y *= y;
+  spine.Matrix.scale(space.scale, x, y, space.scale);
   return space;
 }
 /**
@@ -20772,23 +21895,15 @@ spine.Space.scale = function(space, x, y) {
  */
 spine.Space.invert = function(space, out) {
   out = out || new spine.Space();
-  var inv_scale_x = 1 / space.scale.x;
-  var inv_scale_y = 1 / space.scale.y;
-  var inv_rotation = -space.rotation.rad;
-  var inv_x = -space.position.x;
-  var inv_y = -space.position.y;
-  out.scale.x = inv_scale_x;
-  out.scale.y = inv_scale_y;
-  out.rotation.rad = inv_rotation;
-  var x = inv_x;
-  var y = inv_y;
-  var rad = inv_rotation;
-  var c = Math.cos(rad);
-  var s = Math.sin(rad);
-  var tx = c * x - s * y;
-  var ty = s * x + c * y;
-  out.position.x = tx * inv_scale_x;
-  out.position.y = ty * inv_scale_y;
+  if (space === out) { space = spine.Space.copy(space, new spine.Space()); }
+  spine.Affine.invert(space.updateAffine(), out.affine);
+  out.position.copy(out.affine.vector);
+  out.shear.x.rad = -space.shear.x.rad;
+  out.shear.y.rad = -space.shear.y.rad;
+  var x_axis_rad = Math.atan2(out.affine.matrix.c, out.affine.matrix.a);
+  out.rotation.rad = spine.wrapAngleRadians(x_axis_rad - out.shear.x.rad);
+  spine.Matrix.combine(out.rotation.updateMatrix(), out.shear.updateMatrix(), out.scale);
+  spine.Matrix.extract(out.affine.matrix, out.scale, out.scale);
   return out;
 }
 /**
@@ -20799,18 +21914,16 @@ spine.Space.invert = function(space, out) {
  */
 spine.Space.combine = function(a, b, out) {
   out = out || new spine.Space();
-  var x = b.position.x * a.scale.x;
-  var y = b.position.y * a.scale.y;
-  var rad = a.rotation.rad;
-  var c = Math.cos(rad);
-  var s = Math.sin(rad);
-  var tx = c * x - s * y;
-  var ty = s * x + c * y;
-  out.position.x = tx + a.position.x;
-  out.position.y = ty + a.position.y;
-  out.rotation.rad = spine.wrapAngleRadians(b.rotation.rad + a.rotation.rad);
-  out.scale.x = b.scale.x * a.scale.x;
-  out.scale.y = b.scale.y * a.scale.y;
+  if (a === out) { a = spine.Space.copy(a, new spine.Space()); }
+  if (b === out) { b = spine.Space.copy(b, new spine.Space()); }
+  spine.Affine.combine(a.updateAffine(), b.updateAffine(), out.affine);
+  out.position.copy(out.affine.vector);
+  out.shear.x.rad = spine.wrapAngleRadians(a.shear.x.rad + b.shear.x.rad);
+  out.shear.y.rad = spine.wrapAngleRadians(a.shear.y.rad + b.shear.y.rad);
+  var x_axis_rad = Math.atan2(out.affine.matrix.c, out.affine.matrix.a);
+  out.rotation.rad = spine.wrapAngleRadians(x_axis_rad - out.shear.x.rad);
+  spine.Matrix.combine(out.rotation.updateMatrix(), out.shear.updateMatrix(), out.scale);
+  spine.Matrix.extract(out.affine.matrix, out.scale, out.scale);
   return out;
 }
 /**
@@ -20821,18 +21934,16 @@ spine.Space.combine = function(a, b, out) {
  */
 spine.Space.extract = function(ab, a, out) {
   out = out || new spine.Space();
-  out.scale.x = ab.scale.x / a.scale.x;
-  out.scale.y = ab.scale.y / a.scale.y;
-  out.rotation.rad = spine.wrapAngleRadians(ab.rotation.rad - a.rotation.rad);
-  var x = ab.position.x - a.position.x;
-  var y = ab.position.y - a.position.y;
-  var rad = -a.rotation.rad;
-  var c = Math.cos(rad);
-  var s = Math.sin(rad);
-  var tx = c * x - s * y;
-  var ty = s * x + c * y;
-  out.position.x = tx / a.scale.x;
-  out.position.y = ty / a.scale.y;
+  if (ab === out) { ab = spine.Space.copy(ab, new spine.Space()); }
+  if (a === out) { a = spine.Space.copy(a, new spine.Space()); }
+  spine.Affine.extract(ab.updateAffine(), a.updateAffine(), out.affine);
+  out.position.copy(out.affine.vector);
+  out.shear.x.rad = spine.wrapAngleRadians(ab.shear.x.rad - a.shear.x.rad);
+  out.shear.y.rad = spine.wrapAngleRadians(ab.shear.y.rad - a.shear.y.rad);
+  var x_axis_rad = Math.atan2(out.affine.matrix.c, out.affine.matrix.a);
+  out.rotation.rad = spine.wrapAngleRadians(x_axis_rad - out.shear.x.rad);
+  spine.Matrix.combine(out.rotation.updateMatrix(), out.shear.updateMatrix(), out.scale);
+  spine.Matrix.extract(out.affine.matrix, out.scale, out.scale);
   return out;
 }
 /**
@@ -20842,17 +21953,7 @@ spine.Space.extract = function(ab, a, out) {
  * @param {spine.Vector=} out
  */
 spine.Space.transform = function(space, v, out) {
-  out = out || new spine.Vector();
-  var x = v.x * space.scale.x;
-  var y = v.y * space.scale.y;
-  var rad = space.rotation.rad;
-  var c = Math.cos(rad);
-  var s = Math.sin(rad);
-  var tx = c * x - s * y;
-  var ty = s * x + c * y;
-  out.x = tx + space.position.x;
-  out.y = ty + space.position.y;
-  return out;
+  return spine.Affine.transform(space.updateAffine(), v, out);
 }
 /**
  * @return {spine.Vector}
@@ -20861,17 +21962,7 @@ spine.Space.transform = function(space, v, out) {
  * @param {spine.Vector=} out
  */
 spine.Space.untransform = function(space, v, out) {
-  out = out || new spine.Vector();
-  var x = v.x - space.position.x;
-  var y = v.y - space.position.y;
-  var rad = -space.rotation.rad;
-  var c = Math.cos(rad);
-  var s = Math.sin(rad);
-  var tx = c * x - s * y;
-  var ty = s * x + c * y;
-  out.x = tx / space.scale.x;
-  out.y = ty / space.scale.y;
-  return out;
+  return spine.Affine.untransform(space.updateAffine(), v, out);
 }
 /**
  * @return {spine.Space}
@@ -20881,21 +21972,24 @@ spine.Space.untransform = function(space, v, out) {
  * @param {spine.Space=} out
  */
 spine.Space.tween = function(a, b, tween, out) {
-    out.position.x = spine.tween(a.position.x, b.position.x, tween);
-    out.position.y = spine.tween(a.position.y, b.position.y, tween);
-    out.rotation.rad = spine.tweenAngle(a.rotation.rad, b.rotation.rad, tween);
-    out.scale.x = spine.tween(a.scale.x, b.scale.x, tween);
-    out.scale.y = spine.tween(a.scale.y, b.scale.y, tween);
-    return out;
-  }
-  /**
-   * @constructor
-   */
+  out = out || new spine.Space();
+  a.position.tween(b.position, tween, out.position);
+  a.rotation.tween(b.rotation, tween, out.rotation);
+  a.scale.tween(b.scale, tween, out.scale);
+  a.shear.tween(b.shear, tween, out.shear);
+  return out;
+}
+/**
+ * @constructor
+ */
 spine.Bone = function() {
   var bone = this;
+  bone.color = new spine.Color();
   bone.local_space = new spine.Space();
   bone.world_space = new spine.Space();
 }
+/** @type {spine.Color} */
+spine.Bone.prototype.color;
 /** @type {string} */
 spine.Bone.prototype.parent_key = "";
 /** @type {number} */
@@ -20914,6 +22008,7 @@ spine.Bone.prototype.inherit_scale = true;
  */
 spine.Bone.prototype.copy = function(other) {
   var bone = this;
+  bone.color.copy(other.color);
   bone.parent_key = other.parent_key;
   bone.length = other.length;
   bone.local_space.copy(other.local_space);
@@ -20928,10 +22023,10 @@ spine.Bone.prototype.copy = function(other) {
  */
 spine.Bone.prototype.load = function(json) {
   var bone = this;
+  bone.color.load(json.color || 0x9b9b9bff);
   bone.parent_key = spine.loadString(json, 'parent', "");
   bone.length = spine.loadFloat(json, 'length', 0);
   bone.local_space.load(json);
-  bone.world_space.copy(bone.local_space);
   bone.inherit_rotation = spine.loadBool(json, 'inheritRotation', true);
   bone.inherit_scale = spine.loadBool(json, 'inheritScale', true);
   return bone;
@@ -20942,35 +22037,47 @@ spine.Bone.prototype.load = function(json) {
  * @param {Object.<string,spine.Bone>} bones
  */
 spine.Bone.flatten = function(bone, bones) {
-  var parent_bone = bones[bone.parent_key];
-  if (parent_bone) {
-    spine.Bone.flatten(parent_bone, bones);
-    var a = parent_bone.world_space;
-    var b = bone.local_space;
-    var out = bone.world_space;
-    var x = b.position.x * a.scale.x;
-    var y = b.position.y * a.scale.y;
-    var rad = a.rotation.rad;
-    var c = Math.cos(rad);
-    var s = Math.sin(rad);
-    var tx = c * x - s * y;
-    var ty = s * x + c * y;
-    out.position.x = tx + a.position.x;
-    out.position.y = ty + a.position.y;
-    if (bone.inherit_rotation) {
-      out.rotation.rad = spine.wrapAngleRadians(b.rotation.rad + a.rotation.rad);
-    } else {
-      out.rotation.rad = b.rotation.rad;
-    }
-    if (bone.inherit_scale) {
-      out.scale.x = b.scale.x * a.scale.x;
-      out.scale.y = b.scale.y * a.scale.y;
-    } else {
-      out.scale.x = b.scale.x;
-      out.scale.y = b.scale.y;
-    }
+  var bls = bone.local_space;
+  var bws = bone.world_space;
+  var parent = bones[bone.parent_key];
+  if (!parent) {
+    bws.copy(bls);
+    bws.updateAffine();
   } else {
-    bone.world_space.copy(bone.local_space);
+    spine.Bone.flatten(parent, bones);
+    var pws = parent.world_space;
+    spine.Space.transform(pws, bls.position, bws.position);
+    if (bone.inherit_rotation && bone.inherit_scale) {
+      spine.Matrix.copy(pws.affine.matrix, bws.affine.matrix);
+    } else if (bone.inherit_rotation) {
+      spine.Matrix.identity(bws.affine.matrix);
+      while (parent && parent.inherit_rotation) {
+        var pls = parent.local_space;
+        spine.Matrix.rotate(bws.affine.matrix, pls.rotation.cos, pls.rotation.sin, bws.affine.matrix);
+        parent = bones[parent.parent_key];
+      }
+    } else if (bone.inherit_scale) {
+      spine.Matrix.identity(bws.affine.matrix);
+      while (parent && parent.inherit_scale) {
+        var pls = parent.local_space;
+        var cos = pls.rotation.cos, sin = pls.rotation.sin;
+        spine.Matrix.rotate(bws.affine.matrix, cos, sin, bws.affine.matrix);
+        spine.Matrix.multiply(bws.affine.matrix, pls.scale, bws.affine.matrix);
+        if (pls.scale.x >= 0) { sin = -sin; }
+        spine.Matrix.rotate(bws.affine.matrix, cos, sin, bws.affine.matrix);
+        parent = bones[parent.parent_key];
+      }
+    } else {
+      spine.Matrix.identity(bws.affine.matrix);
+    }
+    bls.updateAffine();
+    spine.Matrix.multiply(bws.affine.matrix, bls.affine.matrix, bws.affine.matrix);
+    bws.shear.x.rad = spine.wrapAngleRadians(pws.shear.x.rad + bls.shear.x.rad);
+    bws.shear.y.rad = spine.wrapAngleRadians(pws.shear.y.rad + bls.shear.y.rad);
+    var x_axis_rad = Math.atan2(bws.affine.matrix.c, bws.affine.matrix.a);
+    bws.rotation.rad = spine.wrapAngleRadians(x_axis_rad - bws.shear.x.rad);
+    spine.Matrix.combine(bws.rotation.updateMatrix(), bws.shear.updateMatrix(), bws.scale);
+    spine.Matrix.extract(bws.affine.matrix, bws.scale, bws.scale);
   }
   return bone;
 }
@@ -21003,6 +22110,110 @@ spine.Ikc.prototype.load = function(json) {
   ikc.mix = spine.loadFloat(json, 'mix', 1);
   ikc.bend_positive = spine.loadBool(json, 'bendPositive', true);
   return ikc;
+}
+/**
+ * @constructor
+ */
+spine.Xfc = function() {
+  var xfc = this;
+  xfc.bone_keys = [];
+  xfc.position = new spine.Position();
+  xfc.rotation = new spine.Rotation();
+  xfc.scale = new spine.Scale();
+  xfc.shear = new spine.Shear();
+}
+/** @type {string} */
+spine.Xfc.prototype.name = "";
+/** @type {Array.<string>} */
+spine.Xfc.prototype.bone_keys;
+/** @type {string} */
+spine.Xfc.prototype.target_key = "";
+/** @type {number} */
+spine.Xfc.prototype.position_mix = 1;
+/** @type {spine.Position} */
+spine.Xfc.prototype.position;
+/** @type {number} */
+spine.Xfc.prototype.rotation_mix = 1;
+/** @type {spine.Rotation} */
+spine.Xfc.prototype.rotation;
+/** @type {number} */
+spine.Xfc.prototype.scale_mix = 1;
+/** @type {spine.Scale} */
+spine.Xfc.prototype.scale;
+/** @type {number} */
+spine.Xfc.prototype.shear_mix = 1;
+/** @type {spine.Shear} */
+spine.Xfc.prototype.shear;
+/**
+ * @return {spine.Xfc}
+ * @param {Object.<string,?>} json
+ */
+spine.Xfc.prototype.load = function(json) {
+  var xfc = this;
+  xfc.name = spine.loadString(json, 'name', "");
+  xfc.bone_keys = json['bones'] || [];
+  xfc.target_key = spine.loadString(json, 'target', "");
+  xfc.position_mix = spine.loadFloat(json, 'translateMix', 1);
+  xfc.position.x = spine.loadFloat(json, 'x', 0);
+  xfc.position.y = spine.loadFloat(json, 'y', 0);
+  xfc.rotation_mix = spine.loadFloat(json, 'rotateMix', 1);
+  xfc.rotation.deg = spine.loadFloat(json, 'rotation', 0);
+  xfc.scale_mix = spine.loadFloat(json, 'scaleMix', 1);
+  xfc.scale.x = spine.loadFloat(json, 'scaleX', 1);
+  xfc.scale.y = spine.loadFloat(json, 'scaleY', 1);
+  xfc.shear_mix = spine.loadFloat(json, 'shearMix', 1);
+  xfc.shear.x.deg = spine.loadFloat(json, 'shearX', 0);
+  xfc.shear.y.deg = spine.loadFloat(json, 'shearY', 0);
+  return xfc;
+}
+/**
+ * @constructor
+ */
+spine.Ptc = function() {
+  var ptc = this;
+  ptc.bone_keys = [];
+  ptc.rotation = new spine.Rotation();
+}
+/** @type {string} */
+spine.Ptc.prototype.name = "";
+/** @type {Array.<string>} */
+spine.Ptc.prototype.bone_keys;
+/** @type {string} */
+spine.Ptc.prototype.target_key = "";
+/** @type {string} */
+spine.Ptc.prototype.spacing_mode = "length"; // "length", "fixed", "percent"
+/** @type {number} */
+spine.Ptc.prototype.spacing = 0;
+/** @type {string} */
+spine.Ptc.prototype.position_mode = "percent"; // "fixed", "percent"
+/** @type {number} */
+spine.Ptc.prototype.position_mix = 1;
+/** @type {number} */
+spine.Ptc.prototype.position = 0;
+/** @type {string} */
+spine.Ptc.prototype.rotation_mode = "tangent"; // "tangent", "chain", "chainScale"
+/** @type {number} */
+spine.Ptc.prototype.rotation_mix = 1;
+/** @type {spine.Rotation} */
+spine.Ptc.prototype.rotation;
+/**
+ * @return {spine.Ptc}
+ * @param {Object.<string,?>} json
+ */
+spine.Ptc.prototype.load = function(json) {
+  var ptc = this;
+  ptc.name = spine.loadString(json, 'name', "");
+  ptc.bone_keys = json['bones'] || [];
+  ptc.target_key = spine.loadString(json, 'target', "");
+  ptc.spacing_mode = spine.loadString(json, 'spacingMode', "length");
+  ptc.spacing = spine.loadFloat(json, 'spacing', 0);
+  ptc.position_mode = spine.loadString(json, 'positionMode', "percent");
+  ptc.position_mix = spine.loadFloat(json, 'translateMix', 1);
+  ptc.position = spine.loadFloat(json, 'position', 0);
+  ptc.rotation_mode = spine.loadString(json, 'rotateMode', "tangent");
+  ptc.rotation_mix = spine.loadFloat(json, 'rotateMix', 1);
+  ptc.rotation.deg = spine.loadFloat(json, 'rotation', 0);
+  return ptc;
 }
 /**
  * @constructor
@@ -21051,7 +22262,7 @@ spine.Attachment = function(type) {
   this.type = type;
 }
 /** @type {string} */
-spine.Attachment.prototype.type = "region";
+spine.Attachment.prototype.type = "";
 /** @type {string} */
 spine.Attachment.prototype.name = "";
 /** @type {string} */
@@ -21076,9 +22287,12 @@ spine.Attachment.prototype.load = function(json) {
  */
 spine.RegionAttachment = function() {
   goog.base(this, 'region');
+  this.color = new spine.Color();
   this.local_space = new spine.Space();
 }
 goog.inherits(spine.RegionAttachment, spine.Attachment);
+/** @type {spine.Color} */
+spine.RegionAttachment.prototype.color;
 /** @type {spine.Space} */
 spine.RegionAttachment.prototype.local_space;
 /** @type {number} */
@@ -21092,6 +22306,7 @@ spine.RegionAttachment.prototype.height = 0;
 spine.RegionAttachment.prototype.load = function(json) {
   goog.base(this, 'load', json);
   var attachment = this;
+  attachment.color.load(json.color);
   attachment.local_space.load(json);
   attachment.width = spine.loadFloat(json, 'width', 0);
   attachment.height = spine.loadFloat(json, 'height', 0);
@@ -21106,9 +22321,7 @@ spine.BoundingBoxAttachment = function() {
   this.vertices = [];
 }
 goog.inherits(spine.BoundingBoxAttachment, spine.Attachment);
-/**
- * @type {Array.<number>}
- */
+/** @type {Array.<number>} */
 spine.BoundingBoxAttachment.prototype.vertices;
 /**
  * @return {spine.Attachment}
@@ -21133,29 +22346,17 @@ spine.MeshAttachment = function() {
   this.uvs = [];
 }
 goog.inherits(spine.MeshAttachment, spine.Attachment);
-/**
- * @type {spine.Color}
- */
+/** @type {spine.Color} */
 spine.MeshAttachment.prototype.color;
-/**
- * @type {Array.<number>}
- */
+/** @type {Array.<number>} */
 spine.MeshAttachment.prototype.triangles;
-/**
- * @type {Array.<number>}
- */
+/** @type {Array.<number>} */
 spine.MeshAttachment.prototype.edges;
-/**
- * @type {Array.<number>}
- */
+/** @type {Array.<number>} */
 spine.MeshAttachment.prototype.vertices;
-/**
- * @type {Array.<number>}
- */
+/** @type {Array.<number>} */
 spine.MeshAttachment.prototype.uvs;
-/**
- * @type {number}
- */
+/** @type {number} */
 spine.MeshAttachment.prototype.hull = 0;
 /**
  * @return {spine.Attachment}
@@ -21176,44 +22377,68 @@ spine.MeshAttachment.prototype.load = function(json) {
  * @constructor
  * @extends {spine.Attachment}
  */
-spine.SkinnedMeshAttachment = function() {
-  goog.base(this, 'skinnedmesh');
+spine.LinkedMeshAttachment = function() {
+  goog.base(this, 'linkedmesh');
+  this.color = new spine.Color();
+}
+goog.inherits(spine.LinkedMeshAttachment, spine.Attachment);
+/** @type {spine.Color} */
+spine.LinkedMeshAttachment.prototype.color;
+/** @type {string} */
+spine.LinkedMeshAttachment.prototype.skin_key = "";
+/** @type {string} */
+spine.LinkedMeshAttachment.prototype.parent_key = "";
+/** @type {boolean} */
+spine.LinkedMeshAttachment.prototype.inherit_ffd = true;
+/** @type {number} */
+spine.LinkedMeshAttachment.prototype.width = 0;
+/** @type {number} */
+spine.LinkedMeshAttachment.prototype.height = 0;
+/**
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
+ */
+spine.LinkedMeshAttachment.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  var attachment = this;
+  attachment.color.load(json.color);
+  attachment.skin_key = spine.loadString(json, 'skin', "");
+  attachment.parent_key = spine.loadString(json, 'parent', "");
+  attachment.inherit_ffd = spine.loadBool(json, 'ffd', true);
+  attachment.width = spine.loadInt(json, 'width', 0);
+  attachment.height = spine.loadInt(json, 'height', 0);
+  return attachment;
+}
+/**
+ * @constructor
+ * @extends {spine.Attachment}
+ */
+spine.WeightedMeshAttachment = function() {
+  goog.base(this, 'weightedmesh');
   this.color = new spine.Color();
   this.triangles = [];
   this.edges = [];
   this.vertices = [];
   this.uvs = [];
 }
-goog.inherits(spine.SkinnedMeshAttachment, spine.Attachment);
-/**
- * @type {spine.Color}
- */
-spine.SkinnedMeshAttachment.prototype.color;
-/**
- * @type {Array.<number>}
- */
-spine.SkinnedMeshAttachment.prototype.triangles;
-/**
- * @type {Array.<number>}
- */
-spine.SkinnedMeshAttachment.prototype.edges;
-/**
- * @type {Array.<number>}
- */
-spine.SkinnedMeshAttachment.prototype.vertices;
-/**
- * @type {Array.<number>}
- */
-spine.SkinnedMeshAttachment.prototype.uvs;
-/**
- * @type {number}
- */
-spine.SkinnedMeshAttachment.prototype.hull = 0;
+goog.inherits(spine.WeightedMeshAttachment, spine.Attachment);
+/** @type {spine.Color} */
+spine.WeightedMeshAttachment.prototype.color;
+/** @type {Array.<number>} */
+spine.WeightedMeshAttachment.prototype.triangles;
+/** @type {Array.<number>} */
+spine.WeightedMeshAttachment.prototype.edges;
+/** @type {Array.<number>} */
+spine.WeightedMeshAttachment.prototype.vertices;
+/** @type {Array.<number>} */
+spine.WeightedMeshAttachment.prototype.uvs;
+/** @type {number} */
+spine.WeightedMeshAttachment.prototype.hull = 0;
 /**
  * @return {spine.Attachment}
  * @param {Object.<string,?>} json
  */
-spine.SkinnedMeshAttachment.prototype.load = function(json) {
+spine.WeightedMeshAttachment.prototype.load = function(json) {
   goog.base(this, 'load', json);
   var attachment = this;
   attachment.color.load(json.color);
@@ -21222,6 +22447,76 @@ spine.SkinnedMeshAttachment.prototype.load = function(json) {
   attachment.vertices = json.vertices || [];
   attachment.uvs = json.uvs || [];
   attachment.hull = spine.loadInt(json, 'hull', 0);
+  return attachment;
+}
+/**
+ * @constructor
+ * @extends {spine.Attachment}
+ */
+spine.WeightedLinkedMeshAttachment = function() {
+  goog.base(this, 'weightedlinkedmesh');
+}
+goog.inherits(spine.WeightedLinkedMeshAttachment, spine.Attachment);
+/** @type {spine.Color} */
+spine.WeightedLinkedMeshAttachment.prototype.color;
+/** @type {string} */
+spine.WeightedLinkedMeshAttachment.prototype.skin_key = "";
+/** @type {string} */
+spine.WeightedLinkedMeshAttachment.prototype.parent_key = "";
+/** @type {boolean} */
+spine.WeightedLinkedMeshAttachment.prototype.inherit_ffd = true;
+/** @type {number} */
+spine.WeightedLinkedMeshAttachment.prototype.width = 0;
+/** @type {number} */
+spine.WeightedLinkedMeshAttachment.prototype.height = 0;
+/**
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
+ */
+spine.WeightedLinkedMeshAttachment.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  var attachment = this;
+  attachment.skin_key = spine.loadString(json, 'skin', "");
+  attachment.parent_key = spine.loadString(json, 'parent', "");
+  attachment.inherit_ffd = spine.loadBool(json, 'ffd', true);
+  attachment.width = spine.loadInt(json, 'width', 0);
+  attachment.height = spine.loadInt(json, 'height', 0);
+  return attachment;
+}
+/**
+ * @constructor
+ * @extends {spine.Attachment}
+ */
+spine.PathAttachment = function() {
+  goog.base(this, 'path');
+  this.color = new spine.Color();
+}
+goog.inherits(spine.PathAttachment, spine.Attachment);
+/** @type {spine.Color} */
+spine.PathAttachment.prototype.color;
+/** @type {boolean} */
+spine.PathAttachment.prototype.closed = false;
+/** @type {boolean} */
+spine.PathAttachment.prototype.accurate = true;
+/** @type {Array.<number>} */
+spine.PathAttachment.prototype.lengths;
+/** @type {number} */
+spine.PathAttachment.prototype.vertex_count = 0;
+/** @type {Array.<number>} */
+spine.PathAttachment.prototype.vertices;
+/**
+ * @return {spine.Attachment}
+ * @param {Object.<string,?>} json
+ */
+spine.PathAttachment.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  var attachment = this;
+  attachment.color.load(json.color);
+  attachment.closed = spine.loadBool(json, 'closed', false);
+  attachment.accurate = spine.loadBool(json, 'constantSpeed', true);
+  attachment.lengths = json.lengths || [];
+  attachment.vertex_count = spine.loadInt(json, 'vertexCount', 0);
+  attachment.vertices = json.vertices || [];
   return attachment;
 }
 /**
@@ -21254,10 +22549,31 @@ spine.SkinSlot.prototype.load = function(json) {
         skin_slot.attachments[attachment_key] = new spine.BoundingBoxAttachment().load(json_attachment);
         break;
       case 'mesh':
-        skin_slot.attachments[attachment_key] = new spine.MeshAttachment().load(json_attachment);
+        if (json_attachment.vertices.length === json_attachment.uvs.length) {
+          skin_slot.attachments[attachment_key] = new spine.MeshAttachment().load(json_attachment);
+        } else {
+          json_attachment.type = 'weightedmesh';
+          skin_slot.attachments[attachment_key] = new spine.WeightedMeshAttachment().load(json_attachment);
+        }
+        break;
+      case 'linkedmesh':
+        if (json_attachment.vertices.length === json_attachment.uvs.length) {
+          skin_slot.attachments[attachment_key] = new spine.LinkedMeshAttachment().load(json_attachment);
+        } else {
+          json_attachment.type = 'weightedlinkedmesh';
+          skin_slot.attachments[attachment_key] = new spine.WeightedLinkedMeshAttachment().load(json_attachment);
+        }
         break;
       case 'skinnedmesh':
-        skin_slot.attachments[attachment_key] = new spine.SkinnedMeshAttachment().load(json_attachment);
+        json_attachment.type = 'weightedmesh';
+      case 'weightedmesh':
+        skin_slot.attachments[attachment_key] = new spine.WeightedMeshAttachment().load(json_attachment);
+        break;
+      case 'weightedlinkedmesh':
+        skin_slot.attachments[attachment_key] = new spine.WeightedLinkedMeshAttachment().load(json_attachment);
+        break;
+      case 'path':
+        skin_slot.attachments[attachment_key] = new spine.PathAttachment().load(json_attachment);
         break;
     }
   });
@@ -21442,18 +22758,18 @@ spine.BoneKeyframe.prototype.load = function(json) {
  * @constructor
  * @extends {spine.BoneKeyframe}
  */
-spine.TranslateKeyframe = function() {
+spine.PositionKeyframe = function() {
   goog.base(this);
   this.position = new spine.Position();
 }
-goog.inherits(spine.TranslateKeyframe, spine.BoneKeyframe);
+goog.inherits(spine.PositionKeyframe, spine.BoneKeyframe);
 /** @type {spine.Position} */
-spine.TranslateKeyframe.prototype.position;
+spine.PositionKeyframe.prototype.position;
 /**
- * @return {spine.TranslateKeyframe}
+ * @return {spine.PositionKeyframe}
  * @param {Object.<string,?>} json
  */
-spine.TranslateKeyframe.prototype.load = function(json) {
+spine.PositionKeyframe.prototype.load = function(json) {
   goog.base(this, 'load', json);
   this.position.x = spine.loadFloat(json, 'x', 0);
   this.position.y = spine.loadFloat(json, 'y', 0);
@@ -21463,18 +22779,18 @@ spine.TranslateKeyframe.prototype.load = function(json) {
  * @constructor
  * @extends {spine.BoneKeyframe}
  */
-spine.RotateKeyframe = function() {
+spine.RotationKeyframe = function() {
   goog.base(this);
   this.rotation = new spine.Rotation();
 }
-goog.inherits(spine.RotateKeyframe, spine.BoneKeyframe);
+goog.inherits(spine.RotationKeyframe, spine.BoneKeyframe);
 /** @type {spine.Rotation} */
-spine.RotateKeyframe.prototype.rotation;
+spine.RotationKeyframe.prototype.rotation;
 /**
- * @return {spine.RotateKeyframe}
+ * @return {spine.RotationKeyframe}
  * @param {Object.<string,?>} json
  */
-spine.RotateKeyframe.prototype.load = function(json) {
+spine.RotationKeyframe.prototype.load = function(json) {
   goog.base(this, 'load', json);
   this.rotation.deg = spine.loadFloat(json, 'angle', 0);
   return this;
@@ -21502,18 +22818,41 @@ spine.ScaleKeyframe.prototype.load = function(json) {
 }
 /**
  * @constructor
+ * @extends {spine.BoneKeyframe}
+ */
+spine.ShearKeyframe = function() {
+  goog.base(this);
+  this.shear = new spine.Shear();
+}
+goog.inherits(spine.ShearKeyframe, spine.BoneKeyframe);
+/** @type {spine.Shear} */
+spine.ShearKeyframe.prototype.shear;
+/**
+ * @return {spine.ShearKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.ShearKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.shear.x.deg = spine.loadFloat(json, 'x', 0);
+  this.shear.y.deg = spine.loadFloat(json, 'y', 0);
+  return this;
+}
+/**
+ * @constructor
  */
 spine.AnimBone = function() {}
 /** @type {number} */
 spine.AnimBone.prototype.min_time = 0;
 /** @type {number} */
 spine.AnimBone.prototype.max_time = 0;
-/** @type {Array.<spine.TranslateKeyframe>} */
-spine.AnimBone.prototype.translate_keyframes = null;
-/** @type {Array.<spine.RotateKeyframe>} */
-spine.AnimBone.prototype.rotate_keyframes = null;
+/** @type {Array.<spine.PositionKeyframe>} */
+spine.AnimBone.prototype.position_keyframes = null;
+/** @type {Array.<spine.RotationKeyframe>} */
+spine.AnimBone.prototype.rotation_keyframes = null;
 /** @type {Array.<spine.ScaleKeyframe>} */
 spine.AnimBone.prototype.scale_keyframes = null;
+/** @type {Array.<spine.ShearKeyframe>} */
+spine.AnimBone.prototype.shear_keyframes = null;
 /**
  * @return {spine.AnimBone}
  * @param {Object.<string,?>} json
@@ -21522,30 +22861,31 @@ spine.AnimBone.prototype.load = function(json) {
   var anim_bone = this;
   anim_bone.min_time = 0;
   anim_bone.max_time = 0;
-  anim_bone.translate_keyframes = null;
-  anim_bone.rotate_keyframes = null;
+  anim_bone.position_keyframes = null;
+  anim_bone.rotation_keyframes = null;
   anim_bone.scale_keyframes = null;
+  anim_bone.shear_keyframes = null;
   Object.keys(json || {}).forEach(function(key) {
     switch (key) {
       case 'translate':
-        anim_bone.translate_keyframes = [];
+        anim_bone.position_keyframes = [];
         json.translate.forEach(function(translate_json) {
-          var translate_keyframe = new spine.TranslateKeyframe().load(translate_json);
-          anim_bone.translate_keyframes.push(translate_keyframe);
-          anim_bone.min_time = Math.min(anim_bone.min_time, translate_keyframe.time);
-          anim_bone.max_time = Math.max(anim_bone.max_time, translate_keyframe.time);
+          var position_keyframe = new spine.PositionKeyframe().load(translate_json);
+          anim_bone.position_keyframes.push(position_keyframe);
+          anim_bone.min_time = Math.min(anim_bone.min_time, position_keyframe.time);
+          anim_bone.max_time = Math.max(anim_bone.max_time, position_keyframe.time);
         });
-        anim_bone.translate_keyframes.sort(spine.Keyframe.compare);
+        anim_bone.position_keyframes.sort(spine.Keyframe.compare);
         break;
       case 'rotate':
-        anim_bone.rotate_keyframes = [];
+        anim_bone.rotation_keyframes = [];
         json.rotate.forEach(function(rotate_json) {
-          var rotate_keyframe = new spine.RotateKeyframe().load(rotate_json);
-          anim_bone.rotate_keyframes.push(rotate_keyframe);
-          anim_bone.min_time = Math.min(anim_bone.min_time, rotate_keyframe.time);
-          anim_bone.max_time = Math.max(anim_bone.max_time, rotate_keyframe.time);
+          var rotation_keyframe = new spine.RotationKeyframe().load(rotate_json);
+          anim_bone.rotation_keyframes.push(rotation_keyframe);
+          anim_bone.min_time = Math.min(anim_bone.min_time, rotation_keyframe.time);
+          anim_bone.max_time = Math.max(anim_bone.max_time, rotation_keyframe.time);
         });
-        anim_bone.rotate_keyframes.sort(spine.Keyframe.compare);
+        anim_bone.rotation_keyframes.sort(spine.Keyframe.compare);
         break;
       case 'scale':
         anim_bone.scale_keyframes = [];
@@ -21556,6 +22896,16 @@ spine.AnimBone.prototype.load = function(json) {
           anim_bone.max_time = Math.max(anim_bone.max_time, scale_keyframe.time);
         });
         anim_bone.scale_keyframes.sort(spine.Keyframe.compare);
+        break;
+      case 'shear':
+        anim_bone.shear_keyframes = [];
+        json.shear.forEach(function(shear_json) {
+          var shear_keyframe = new spine.ShearKeyframe().load(shear_json);
+          anim_bone.shear_keyframes.push(shear_keyframe);
+          anim_bone.min_time = Math.min(anim_bone.min_time, shear_keyframe.time);
+          anim_bone.max_time = Math.max(anim_bone.max_time, shear_keyframe.time);
+        });
+        anim_bone.shear_keyframes.sort(spine.Keyframe.compare);
         break;
       default:
         console.log("TODO: spine.AnimBone::load", key);
@@ -21586,22 +22936,22 @@ spine.SlotKeyframe.prototype.load = function(json) {
  */
 spine.ColorKeyframe = function() {
   goog.base(this);
-  this.color = new spine.Color();
   this.curve = new spine.Curve();
+  this.color = new spine.Color();
 }
 goog.inherits(spine.ColorKeyframe, spine.SlotKeyframe);
-/** @type {spine.Color} */
-spine.ColorKeyframe.prototype.color;
 /** @type {spine.Curve} */
 spine.ColorKeyframe.prototype.curve;
+/** @type {spine.Color} */
+spine.ColorKeyframe.prototype.color;
 /**
  * @return {spine.ColorKeyframe}
  * @param {Object.<string,?>} json
  */
 spine.ColorKeyframe.prototype.load = function(json) {
   goog.base(this, 'load', json);
-  this.color.load(json.color);
   this.curve.load(json.curve);
+  this.color.load(json.color);
   return this;
 }
 /**
@@ -21671,7 +23021,7 @@ spine.AnimSlot.prototype.load = function(json) {
         console.log("TODO: spine.AnimSlot::load", key);
         break;
     }
-  })
+  });
   return anim_slot;
 }
 /**
@@ -21776,7 +23126,7 @@ spine.IkcKeyframe.prototype.bend_positive = true;
  */
 spine.IkcKeyframe.prototype.load = function(json) {
   goog.base(this, 'load', json);
-  this.curve.load(json);
+  this.curve.load(json.curve);
   this.mix = spine.loadFloat(json, 'mix', 1);
   this.bend_positive = spine.loadBool(json, 'bendPositive', true);
   return this;
@@ -21813,6 +23163,210 @@ spine.AnimIkc.prototype.load = function(json) {
  * @constructor
  * @extends {spine.Keyframe}
  */
+spine.XfcKeyframe = function() {
+  goog.base(this);
+  this.curve = new spine.Curve();
+}
+goog.inherits(spine.XfcKeyframe, spine.Keyframe);
+/** @type {spine.Curve} */
+spine.XfcKeyframe.prototype.curve;
+/** @type {number} */
+spine.XfcKeyframe.prototype.position_mix = 1;
+/** @type {number} */
+spine.XfcKeyframe.prototype.rotation_mix = 1;
+/** @type {number} */
+spine.XfcKeyframe.prototype.scale_mix = 1;
+/** @type {number} */
+spine.XfcKeyframe.prototype.shear_mix = 1;
+/**
+ * @return {spine.XfcKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.XfcKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.curve.load(json.curve);
+  this.position_mix = spine.loadFloat(json, 'translateMix', 1);
+  this.rotation_mix = spine.loadFloat(json, 'rotateMix', 1);
+  this.scale_mix = spine.loadFloat(json, 'scaleMix', 1);
+  this.shear_mix = spine.loadFloat(json, 'shearMix', 1);
+  return this;
+}
+/**
+ * @constructor
+ */
+spine.AnimXfc = function() {}
+/** @type {number} */
+spine.AnimXfc.prototype.min_time = 0;
+/** @type {number} */
+spine.AnimXfc.prototype.max_time = 0;
+/** @type {Array.<spine.XfcKeyframe>} */
+spine.AnimXfc.prototype.xfc_keyframes = null;
+/**
+ * @return {spine.AnimXfc}
+ * @param {Object.<string,?>} json
+ */
+spine.AnimXfc.prototype.load = function(json) {
+  var anim_xfc = this;
+  anim_xfc.min_time = 0;
+  anim_xfc.max_time = 0;
+  anim_xfc.xfc_keyframes = [];
+  json.forEach(function(xfc) {
+    var xfc_keyframe = new spine.XfcKeyframe().load(xfc);
+    anim_xfc.min_time = Math.min(anim_xfc.min_time, xfc_keyframe.time);
+    anim_xfc.max_time = Math.max(anim_xfc.max_time, xfc_keyframe.time);
+    anim_xfc.xfc_keyframes.push(xfc_keyframe);
+  });
+  anim_xfc.xfc_keyframes.sort(spine.Keyframe.compare);
+  return anim_xfc;
+}
+/**
+ * @constructor
+ * @extends {spine.Keyframe}
+ */
+spine.PtcKeyframe = function() {
+  goog.base(this);
+  this.curve = new spine.Curve();
+}
+goog.inherits(spine.PtcKeyframe, spine.Keyframe);
+/** @type {spine.Curve} */
+spine.PtcKeyframe.prototype.curve;
+/**
+ * @return {spine.PtcKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.curve.load(json.curve);
+  return this;
+}
+/**
+ * @constructor
+ * @extends {spine.PtcKeyframe}
+ */
+spine.PtcSpacingKeyframe = function() {
+  goog.base(this);
+}
+goog.inherits(spine.PtcSpacingKeyframe, spine.PtcKeyframe);
+/** @type {number} */
+spine.PtcSpacingKeyframe.prototype.spacing = 0;
+/**
+ * @return {spine.PtcSpacingKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcSpacingKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.spacing = spine.loadFloat(json, 'spacing', 0);
+  return this;
+}
+/**
+ * @constructor
+ * @extends {spine.PtcKeyframe}
+ */
+spine.PtcPositionKeyframe = function() {
+  goog.base(this);
+}
+goog.inherits(spine.PtcPositionKeyframe, spine.PtcKeyframe);
+/** @type {number} */
+spine.PtcPositionKeyframe.prototype.position_mix = 1;
+/** @type {number} */
+spine.PtcPositionKeyframe.prototype.position = 0;
+/**
+ * @return {spine.PtcPositionKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcPositionKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.position_mix = spine.loadFloat(json, 'positionMix', 1);
+  this.position = spine.loadFloat(json, 'position', 0);
+  return this;
+}
+/**
+ * @constructor
+ * @extends {spine.PtcKeyframe}
+ */
+spine.PtcRotationKeyframe = function() {
+  goog.base(this);
+}
+goog.inherits(spine.PtcRotationKeyframe, spine.PtcKeyframe);
+/** @type {number} */
+spine.PtcRotationKeyframe.prototype.rotation_mix = 1;
+/** @type {number} */
+spine.PtcRotationKeyframe.prototype.rotation = 0;
+/**
+ * @return {spine.PtcRotationKeyframe}
+ * @param {Object.<string,?>} json
+ */
+spine.PtcRotationKeyframe.prototype.load = function(json) {
+  goog.base(this, 'load', json);
+  this.rotation_mix = spine.loadFloat(json, 'rotationMix', 1);
+  this.rotation = spine.loadFloat(json, 'rotation', 0);
+  return this;
+}
+/**
+ * @constructor
+ */
+spine.AnimPtc = function() {}
+/** @type {number} */
+spine.AnimPtc.prototype.min_time = 0;
+/** @type {number} */
+spine.AnimPtc.prototype.max_time = 0;
+/** @type {Array.<spine.PtcSpacingKeyframe>} */
+spine.AnimPtc.prototype.ptc_spacing_keyframes = null;
+/** @type {Array.<spine.PtcPositionKeyframe>} */
+spine.AnimPtc.prototype.ptc_position_keyframes = null;
+/** @type {Array.<spine.PtcRotationKeyframe>} */
+spine.AnimPtc.prototype.ptc_rotation_keyframes = null;
+/**
+ * @return {spine.AnimPtc}
+ * @param {Object.<string,?>} json
+ */
+spine.AnimPtc.prototype.load = function(json) {
+  var anim_ptc = this;
+  anim_ptc.min_time = 0;
+  anim_ptc.max_time = 0;
+  anim_ptc.ptc_spacing_keyframes = [];
+  anim_ptc.ptc_position_keyframes = [];
+  anim_ptc.ptc_rotation_keyframes = [];
+  Object.keys(json || {}).forEach(function(key) {
+    switch (key) {
+      case 'spacing':
+        json[key].forEach(function(spacing_json) {
+          var ptc_spacing_keyframe = new spine.PtcSpacingKeyframe().load(spacing_json);
+          anim_ptc.min_time = Math.min(anim_ptc.min_time, ptc_spacing_keyframe.time);
+          anim_ptc.max_time = Math.max(anim_ptc.max_time, ptc_spacing_keyframe.time);
+          anim_ptc.ptc_spacing_keyframes.push(ptc_spacing_keyframe);
+        });
+        anim_ptc.ptc_spacing_keyframes.sort(spine.Keyframe.compare);
+        break;
+      case 'position':
+        json[key].forEach(function(position_json) {
+          var ptc_position_keyframe = new spine.PtcPositionKeyframe().load(position_json);
+          anim_ptc.min_time = Math.min(anim_ptc.min_time, ptc_position_keyframe.time);
+          anim_ptc.max_time = Math.max(anim_ptc.max_time, ptc_position_keyframe.time);
+          anim_ptc.ptc_position_keyframes.push(ptc_position_keyframe);
+        });
+        anim_ptc.ptc_position_keyframes.sort(spine.Keyframe.compare);
+        break;
+      case 'rotation':
+        json[key].forEach(function(rotation_json) {
+          var ptc_rotation_keyframe = new spine.PtcRotationKeyframe().load(rotation_json);
+          anim_ptc.min_time = Math.min(anim_ptc.min_time, ptc_rotation_keyframe.time);
+          anim_ptc.max_time = Math.max(anim_ptc.max_time, ptc_rotation_keyframe.time);
+          anim_ptc.ptc_rotation_keyframes.push(ptc_rotation_keyframe);
+        });
+        anim_ptc.ptc_rotation_keyframes.sort(spine.Keyframe.compare);
+        break;
+      default:
+        console.log("TODO: spine.AnimPtc::load", key);
+        break;
+    }
+  });
+  return anim_ptc;
+}
+/**
+ * @constructor
+ * @extends {spine.Keyframe}
+ */
 spine.FfdKeyframe = function() {
   goog.base(this);
   this.curve = new spine.Curve();
@@ -21831,7 +23385,7 @@ spine.FfdKeyframe.prototype.vertices;
  */
 spine.FfdKeyframe.prototype.load = function(json) {
   goog.base(this, 'load', json);
-  this.curve.load(json);
+  this.curve.load(json.curve);
   this.offset = spine.loadInt(json, 'offset', 0);
   this.vertices = json.vertices || [];
   return this;
@@ -21955,6 +23509,8 @@ spine.Animation = function() {
   anim.bones = {};
   anim.slots = {};
   anim.ikcs = {};
+  anim.xfcs = {};
+  anim.ptcs = {};
   anim.ffds = {};
 }
 /** @type {string} */
@@ -21969,6 +23525,10 @@ spine.Animation.prototype.event_keyframes = null;
 spine.Animation.prototype.order_keyframes = null;
 /** @type {Object.<string,spine.AnimIkc>} */
 spine.Animation.prototype.ikcs;
+/** @type {Object.<string,spine.AnimXfc>} */
+spine.Animation.prototype.xfcs;
+/** @type {Object.<string,spine.AnimPtc>} */
+spine.Animation.prototype.ptcs;
 /** @type {Object.<string,spine.AnimFfd>} */
 spine.Animation.prototype.ffds;
 /** @type {number} */
@@ -21988,6 +23548,8 @@ spine.Animation.prototype.load = function(json) {
   anim.event_keyframes = null;
   anim.order_keyframes = null;
   anim.ikcs = {};
+  anim.xfcs = {};
+  anim.ptcs = {};
   anim.ffds = {};
   anim.min_time = 0;
   anim.max_time = 0;
@@ -22038,7 +23600,24 @@ spine.Animation.prototype.load = function(json) {
           anim.ikcs[ikc_key] = anim_ikc;
         });
         break;
+      case 'transform':
+        Object.keys(json[key] || {}).forEach(function(xfc_key) {
+          var anim_xfc = new spine.AnimXfc().load(json[key][xfc_key]);
+          anim.min_time = Math.min(anim.min_time, anim_xfc.min_time);
+          anim.max_time = Math.max(anim.max_time, anim_xfc.max_time);
+          anim.xfcs[xfc_key] = anim_xfc;
+        });
+        break;
+      case 'paths':
+        Object.keys(json[key] || {}).forEach(function(ptc_key) {
+          var anim_ptc = new spine.AnimPtc().load(json[key][ptc_key]);
+          anim.min_time = Math.min(anim.min_time, anim_ptc.min_time);
+          anim.max_time = Math.max(anim.max_time, anim_ptc.max_time);
+          anim.ptcs[ptc_key] = anim_ptc;
+        });
+        break;
       case 'ffd':
+      case 'deform':
         Object.keys(json[key] || {}).forEach(function(ffd_key) {
           var anim_ffd = new spine.AnimFfd().load(json[key][ffd_key]);
           anim.min_time = Math.min(anim.min_time, anim_ffd.min_time);
@@ -22091,6 +23670,10 @@ spine.Data = function() {
   data.bone_keys = [];
   data.ikcs = {};
   data.ikc_keys = [];
+  data.xfcs = {};
+  data.xfc_keys = [];
+  data.ptcs = {};
+  data.ptc_keys = [];
   data.slots = {};
   data.slot_keys = [];
   data.skins = {};
@@ -22112,6 +23695,14 @@ spine.Data.prototype.bone_keys;
 spine.Data.prototype.ikcs;
 /** @type {Array.<string>} */
 spine.Data.prototype.ikc_keys;
+/** @type {Object.<string,spine.Xfc>} */
+spine.Data.prototype.xfcs;
+/** @type {Array.<string>} */
+spine.Data.prototype.xfc_keys;
+/** @type {Object.<string,spine.Ptc>} */
+spine.Data.prototype.ptcs;
+/** @type {Array.<string>} */
+spine.Data.prototype.ptc_keys;
 /** @type {Object.<string,spine.Slot>} */
 spine.Data.prototype.slots;
 /** @type {Array.<string>} */
@@ -22138,6 +23729,10 @@ spine.Data.prototype.load = function(json) {
   data.bone_keys = [];
   data.ikcs = {};
   data.ikc_keys = [];
+  data.xfcs = {};
+  data.xfc_keys = [];
+  data.ptcs = {};
+  data.ptc_keys = [];
   data.slots = {};
   data.slot_keys = [];
   data.skins = {};
@@ -22163,6 +23758,70 @@ spine.Data.prototype.load = function(json) {
         json_ik.forEach(function(ikc, ikc_index) {
           data.ikcs[ikc.name] = new spine.Ikc().load(ikc);
           data.ikc_keys[ikc_index] = ikc.name;
+        });
+        data.ikc_keys = data.ikc_keys.sort(function(a, b) {
+          var ikc_a = data.ikcs[a];
+          var ikc_b = data.ikcs[b];
+          for (var ia = 0; ia < ikc_a.bone_keys.length; ++ia) {
+            var bone_a = data.bones[ikc_a.bone_keys[ia]];
+            for (var ib = 0; ib < ikc_b.bone_keys.length; ++ib) {
+              var bone_b = data.bones[ikc_b.bone_keys[ib]];
+              var bone_a_parent = data.bones[bone_a.parent_key];
+              while (bone_a_parent) {
+                if (bone_a_parent === bone_b) {
+                  return 1;
+                }
+                bone_a_parent = data.bones[bone_a_parent.parent_key];
+              }
+              var bone_b_parent = data.bones[bone_b.parent_key];
+              while (bone_b_parent) {
+                if (bone_b_parent === bone_a) {
+                  return -1;
+                }
+                bone_b_parent = data.bones[bone_b_parent.parent_key];
+              }
+            }
+          }
+          return 0;
+        });
+        break;
+      case 'transform':
+        var json_transform = json[key];
+        json_transform.forEach(function(xfc, xfc_index) {
+          data.xfcs[xfc.name] = new spine.Xfc().load(xfc);
+          data.xfc_keys[xfc_index] = xfc.name;
+        });
+        data.xfc_keys = data.xfc_keys.sort(function(a, b) {
+          var xfc_a = data.xfcs[a];
+          var xfc_b = data.xfcs[b];
+          for (var ia = 0; ia < xfc_a.bone_keys.length; ++ia) {
+            var bone_a = data.bones[xfc_a.bone_keys[ia]];
+            for (var ib = 0; ib < xfc_b.bone_keys.length; ++ib) {
+              var bone_b = data.bones[xfc_b.bone_keys[ib]];
+              var bone_a_parent = data.bones[bone_a.parent_key];
+              while (bone_a_parent) {
+                if (bone_a_parent === bone_b) {
+                  return 1;
+                }
+                bone_a_parent = data.bones[bone_a_parent.parent_key];
+              }
+              var bone_b_parent = data.bones[bone_b.parent_key];
+              while (bone_b_parent) {
+                if (bone_b_parent === bone_a) {
+                  return -1;
+                }
+                bone_b_parent = data.bones[bone_b_parent.parent_key];
+              }
+            }
+          }
+          return 0;
+        });
+        break;
+      case 'path':
+        var json_path = json[key];
+        json_path.forEach(function(ptc, ptc_index) {
+          data.ptcs[ptc.name] = new spine.Ptc().load(ptc);
+          data.ptc_keys[ptc_index] = ptc.name;
         });
         break;
       case 'slots':
@@ -22280,6 +23939,10 @@ spine.Data.prototype.iterateAttachments = function(skin_key, callback) {
     var skin_slot = skin && (skin.slots[slot_key] || default_skin.slots[slot_key]);
     var attachment = skin_slot && skin_slot.attachments[data_slot.attachment_key];
     var attachment_key = (attachment && (attachment.path || attachment.name)) || data_slot.attachment_key;
+    if (attachment && ((attachment.type === 'linkedmesh') || (attachment.type === 'weightedlinkedmesh'))) {
+      attachment_key = attachment && (attachment.path || attachment.parent_key);
+      attachment = skin_slot && skin_slot.attachments[attachment_key];
+    }
     callback(slot_key, data_slot, skin_slot, attachment_key, attachment);
   });
 }
@@ -22513,28 +24176,28 @@ spine.Pose.prototype.strike = function() {
     pose_bone.copy(data_bone);
     var anim_bone = anim && anim.bones[bone_key];
     if (anim_bone) {
-      keyframe_index = spine.Keyframe.find(anim_bone.translate_keyframes, time);
+      keyframe_index = spine.Keyframe.find(anim_bone.position_keyframes, time);
       if (keyframe_index !== -1) {
-        var translate_keyframe0 = anim_bone.translate_keyframes[keyframe_index];
-        var translate_keyframe1 = anim_bone.translate_keyframes[keyframe_index + 1];
-        if (translate_keyframe1) {
-          pct = translate_keyframe0.curve.evaluate((time - translate_keyframe0.time) / (translate_keyframe1.time - translate_keyframe0.time));
-          pose_bone.local_space.position.x += spine.tween(translate_keyframe0.position.x, translate_keyframe1.position.x, pct);
-          pose_bone.local_space.position.y += spine.tween(translate_keyframe0.position.y, translate_keyframe1.position.y, pct);
+        var position_keyframe0 = anim_bone.position_keyframes[keyframe_index];
+        var position_keyframe1 = anim_bone.position_keyframes[keyframe_index + 1];
+        if (position_keyframe1) {
+          pct = position_keyframe0.curve.evaluate((time - position_keyframe0.time) / (position_keyframe1.time - position_keyframe0.time));
+          pose_bone.local_space.position.x += spine.tween(position_keyframe0.position.x, position_keyframe1.position.x, pct);
+          pose_bone.local_space.position.y += spine.tween(position_keyframe0.position.y, position_keyframe1.position.y, pct);
         } else {
-          pose_bone.local_space.position.x += translate_keyframe0.position.x;
-          pose_bone.local_space.position.y += translate_keyframe0.position.y;
+          pose_bone.local_space.position.x += position_keyframe0.position.x;
+          pose_bone.local_space.position.y += position_keyframe0.position.y;
         }
       }
-      keyframe_index = spine.Keyframe.find(anim_bone.rotate_keyframes, time);
+      keyframe_index = spine.Keyframe.find(anim_bone.rotation_keyframes, time);
       if (keyframe_index !== -1) {
-        var rotate_keyframe0 = anim_bone.rotate_keyframes[keyframe_index];
-        var rotate_keyframe1 = anim_bone.rotate_keyframes[keyframe_index + 1];
-        if (rotate_keyframe1) {
-          pct = rotate_keyframe0.curve.evaluate((time - rotate_keyframe0.time) / (rotate_keyframe1.time - rotate_keyframe0.time));
-          pose_bone.local_space.rotation.rad += spine.tweenAngle(rotate_keyframe0.rotation.rad, rotate_keyframe1.rotation.rad, pct);
+        var rotation_keyframe0 = anim_bone.rotation_keyframes[keyframe_index];
+        var rotation_keyframe1 = anim_bone.rotation_keyframes[keyframe_index + 1];
+        if (rotation_keyframe1) {
+          pct = rotation_keyframe0.curve.evaluate((time - rotation_keyframe0.time) / (rotation_keyframe1.time - rotation_keyframe0.time));
+          pose_bone.local_space.rotation.rad += spine.tweenAngle(rotation_keyframe0.rotation.rad, rotation_keyframe1.rotation.rad, pct);
         } else {
-          pose_bone.local_space.rotation.rad += rotate_keyframe0.rotation.rad;
+          pose_bone.local_space.rotation.rad += rotation_keyframe0.rotation.rad;
         }
       }
       keyframe_index = spine.Keyframe.find(anim_bone.scale_keyframes, time);
@@ -22543,20 +24206,30 @@ spine.Pose.prototype.strike = function() {
         var scale_keyframe1 = anim_bone.scale_keyframes[keyframe_index + 1];
         if (scale_keyframe1) {
           pct = scale_keyframe0.curve.evaluate((time - scale_keyframe0.time) / (scale_keyframe1.time - scale_keyframe0.time));
-          pose_bone.local_space.scale.x += spine.tween(scale_keyframe0.scale.x, scale_keyframe1.scale.x, pct) - 1;
-          pose_bone.local_space.scale.y += spine.tween(scale_keyframe0.scale.y, scale_keyframe1.scale.y, pct) - 1;
+          pose_bone.local_space.scale.a *= spine.tween(scale_keyframe0.scale.a, scale_keyframe1.scale.a, pct);
+          pose_bone.local_space.scale.d *= spine.tween(scale_keyframe0.scale.d, scale_keyframe1.scale.d, pct);
         } else {
-          pose_bone.local_space.scale.x += scale_keyframe0.scale.x - 1;
-          pose_bone.local_space.scale.y += scale_keyframe0.scale.y - 1;
+          pose_bone.local_space.scale.a *= scale_keyframe0.scale.a;
+          pose_bone.local_space.scale.d *= scale_keyframe0.scale.d;
+        }
+      }
+      keyframe_index = spine.Keyframe.find(anim_bone.shear_keyframes, time);
+      if (keyframe_index !== -1) {
+        var shear_keyframe0 = anim_bone.shear_keyframes[keyframe_index];
+        var shear_keyframe1 = anim_bone.shear_keyframes[keyframe_index + 1];
+        if (shear_keyframe1) {
+          pct = shear_keyframe0.curve.evaluate((time - shear_keyframe0.time) / (shear_keyframe1.time - shear_keyframe0.time));
+          pose_bone.local_space.shear.x.rad += spine.tweenAngle(shear_keyframe0.shear.x.rad, shear_keyframe1.shear.x.rad, pct);
+          pose_bone.local_space.shear.y.rad += spine.tweenAngle(shear_keyframe0.shear.y.rad, shear_keyframe1.shear.y.rad, pct);
+        } else {
+          pose_bone.local_space.shear.x.rad += shear_keyframe0.shear.x.rad;
+          pose_bone.local_space.shear.y.rad += shear_keyframe0.shear.y.rad;
         }
       }
     }
   });
   pose.bone_keys = data.bone_keys;
   data.ikc_keys.forEach(function(ikc_key) {
-    function clamp(n, lo, hi) {
-      return (n < lo) ? (lo) : ((n > hi) ? (hi) : (n));
-    }
     var ikc = data.ikcs[ikc_key];
     var ikc_mix = ikc.mix;
     var ikc_bend_positive = ikc.bend_positive;
@@ -22575,81 +24248,170 @@ spine.Pose.prototype.strike = function() {
         ikc_bend_positive = ikc_keyframe0.bend_positive;
       }
     }
-    var target = pose.bones[ikc.target_key];
-    spine.Bone.flatten(target, pose.bones);
-    var target_x = target.world_space.position.x;
-    var target_y = target.world_space.position.y;
     var alpha = ikc_mix;
-    var bend_direction = (ikc_bend_positive) ? (1) : (-1);
+    var bendDir = (ikc_bend_positive) ? (1) : (-1);
     if (alpha === 0) {
       return;
     }
+    var target = pose.bones[ikc.target_key];
+    spine.Bone.flatten(target, pose.bones);
     switch (ikc.bone_keys.length) {
       case 1:
         var bone = pose.bones[ikc.bone_keys[0]];
         spine.Bone.flatten(bone, pose.bones);
-        var parent_rotation = 0;
+        var a1 = Math.atan2(target.world_space.position.y - bone.world_space.position.y, target.world_space.position.x - bone.world_space.position.x);
         var bone_parent = pose.bones[bone.parent_key];
-        if (bone_parent && bone.inherit_rotation) {
+        if (bone_parent) {
           spine.Bone.flatten(bone_parent, pose.bones);
-          parent_rotation = bone_parent.world_space.rotation.rad;
+          if (spine.Matrix.determinant(bone_parent.world_space.scale) < 0) {
+            a1 += bone_parent.world_space.rotation.rad;
+          } else {
+            a1 -= bone_parent.world_space.rotation.rad;
+          }
         }
-        target_x -= bone.world_space.position.x;
-        target_y -= bone.world_space.position.y;
-        bone.local_space.rotation.rad = spine.tweenAngle(bone.local_space.rotation.rad, Math.atan2(target_y, target_x) - parent_rotation, alpha);
+        bone.local_space.rotation.rad = spine.tweenAngle(bone.local_space.rotation.rad, a1, alpha);
         break;
       case 2:
         var parent = pose.bones[ikc.bone_keys[0]];
         spine.Bone.flatten(parent, pose.bones);
         var child = pose.bones[ikc.bone_keys[1]];
         spine.Bone.flatten(child, pose.bones);
-        var position = new spine.Vector();
-        var parent_parent = pose.bones[parent.parent_key];
-        if (parent_parent) {
-          position.x = target_x;
-          position.y = target_y;
-          spine.Bone.flatten(parent_parent, pose.bones);
-          spine.Space.untransform(parent_parent.world_space, position, position); // world to local
-          target_x = (position.x - parent.local_space.position.x) * parent_parent.world_space.scale.x;
-          target_y = (position.y - parent.local_space.position.y) * parent_parent.world_space.scale.y;
+        var px = parent.local_space.position.x;
+        var py = parent.local_space.position.y;
+        var psx = parent.local_space.scale.x;
+        var psy = parent.local_space.scale.y;
+        var cy = child.local_space.position.y;
+        var csx = child.local_space.scale.x;
+        var offset1 = 0, offset2 = 0, sign2 = 1;
+        if (psx < 0) {
+          psx = -psx;
+          offset1 = Math.PI;
+          sign2 = -1;
+        }
+        if (psy < 0) {
+          psy = -psy;
+          sign2 = -sign2;
+        }
+        if (csx < 0) {
+          csx = -csx;
+          offset2 = Math.PI;
+        }
+        var t = spine.Vector.copy(target.world_space.position, new spine.Vector());
+        var d = spine.Vector.copy(child.world_space.position, new spine.Vector());
+        var pp = pose.bones[parent.parent_key];
+        if (pp) {
+          spine.Bone.flatten(pp, pose.bones);
+          spine.Space.untransform(pp.world_space, t, t);
+          spine.Space.untransform(pp.world_space, d, d);
+        }
+        spine.Vector.subtract(t, parent.local_space.position, t);
+        spine.Vector.subtract(d, parent.local_space.position, d);
+        var tx = t.x, ty = t.y;
+        var dx = d.x, dy = d.y;
+        var l1 = Math.sqrt(dx * dx + dy * dy), l2 = child.length * csx, a1, a2;
+        outer:
+        if (Math.abs(psx - psy) <= 0.0001) {
+          l2 *= psx;
+          var cos = (tx * tx + ty * ty - l1 * l1 - l2 * l2) / (2 * l1 * l2);
+          if (cos < -1) cos = -1; else if (cos > 1) cos = 1; // clamp
+          a2 = Math.acos(cos) * bendDir;
+          var adj = l1 + l2 * cos;
+          var opp = l2 * Math.sin(a2);
+          a1 = Math.atan2(ty * adj - tx * opp, tx * adj + ty * opp);
         } else {
-          target_x -= parent.local_space.position.x;
-          target_y -= parent.local_space.position.y;
+          cy = 0;
+          var a = psx * l2;
+          var b = psy * l2;
+          var ta = Math.atan2(ty, tx);
+          var aa = a * a;
+          var bb = b * b;
+          var ll = l1 * l1;
+          var dd = tx * tx + ty * ty;
+          var c0 = bb * ll + aa * dd - aa * bb;
+          var c1 = -2 * bb * l1;
+          var c2 = bb - aa;
+          var d = c1 * c1 - 4 * c2 * c0;
+          if (d >= 0) {
+            var q = Math.sqrt(d);
+            if (c1 < 0) q = -q;
+            q = -(c1 + q) / 2;
+            var r0 = q / c2, r1 = c0 / q;
+            var r = Math.abs(r0) < Math.abs(r1) ? r0 : r1;
+            if (r * r <= dd) {
+              var y = Math.sqrt(dd - r * r) * bendDir;
+              a1 = ta - Math.atan2(y, r);
+              a2 = Math.atan2(y / psy, (r - l1) / psx);
+              break outer;
+            }
+          }
+          var minAngle = 0, minDist = Number.MAX_VALUE, minX = 0, minY = 0;
+          var maxAngle = 0, maxDist = 0, maxX = 0, maxY = 0;
+          var angle, dist, x, y;
+          x = l1 + a; dist = x * x;
+          if (dist > maxDist) { maxAngle = 0; maxDist = dist; maxX = x; }
+          x = l1 - a; dist = x * x;
+          if (dist < minDist) { minAngle = Math.PI; minDist = dist; minX = x; }
+          angle = Math.acos(-a * l1 / (aa - bb));
+          x = a * Math.cos(angle) + l1;
+          y = b * Math.sin(angle);
+          dist = x * x + y * y;
+          if (dist < minDist) { minAngle = angle; minDist = dist; minX = x; minY = y; }
+          if (dist > maxDist) { maxAngle = angle; maxDist = dist; maxX = x; maxY = y; }
+          if (dd <= (minDist + maxDist) / 2) {
+            a1 = ta - Math.atan2(minY * bendDir, minX);
+            a2 = minAngle * bendDir;
+          } else {
+            a1 = ta - Math.atan2(maxY * bendDir, maxX);
+            a2 = maxAngle * bendDir;
+          }
         }
-        position.copy(child.local_space.position);
-        var child_parent = pose.bones[child.parent_key];
-        if (child_parent !== parent) {
-          spine.Bone.flatten(child_parent, pose.bones);
-          spine.Space.transform(child_parent.world_space, position, position); // local to world
-          spine.Space.untransform(parent.world_space, position, position); // world to local
-        }
-        var child_x = position.x * parent.world_space.scale.x;
-        var child_y = position.y * parent.world_space.scale.y;
-        var offset = Math.atan2(child_y, child_x);
-        var len1 = Math.sqrt(child_x * child_x + child_y * child_y);
-        var len2 = child.length * child.world_space.scale.x;
-        var cos_denom = 2 * len1 * len2;
-        if (cos_denom < 0.0001) {
-          child.local_space.rotation.rad = spine.tweenAngle(child.local_space.rotation.rad, Math.atan2(target_y, target_x) - parent.local_space.rotation.rad, alpha);
-          return;
-        }
-        var cos = clamp((target_x * target_x + target_y * target_y - len1 * len1 - len2 * len2) / cos_denom, -1, 1);
-        var rad = Math.acos(cos) * bend_direction;
-        var sin = Math.sin(rad);
-        var adjacent = len2 * cos + len1;
-        var opposite = len2 * sin;
-        var parent_angle = Math.atan2(target_y * adjacent - target_x * opposite, target_x * adjacent + target_y * opposite);
-        parent.local_space.rotation.rad = spine.tweenAngle(parent.local_space.rotation.rad, (parent_angle - offset), alpha);
-        var child_angle = rad;
-        if (child_parent !== parent) {
-          child_angle += parent.world_space.rotation.rad - child_parent.world_space.rotation.rad;
-        }
-        child.local_space.rotation.rad = spine.tweenAngle(child.local_space.rotation.rad, (child_angle + offset), alpha);
+        var offset = Math.atan2(cy, child.local_space.position.x) * sign2;
+        a1 = (a1 - offset) + offset1;
+        a2 = (a2 + offset) * sign2 + offset2;
+        parent.local_space.rotation.rad = spine.tweenAngle(parent.local_space.rotation.rad, a1, alpha);
+        child.local_space.rotation.rad = spine.tweenAngle(child.local_space.rotation.rad, a2, alpha);
         break;
     }
   });
   pose.iterateBones(function(bone_key, bone) {
     spine.Bone.flatten(bone, pose.bones);
+  });
+  data.xfc_keys.forEach(function(xfc_key) {
+    var xfc = data.xfcs[xfc_key];
+    var xfc_position_mix = xfc.position_mix;
+    var xfc_rotation_mix = xfc.rotation_mix;
+    var xfc_scale_mix = xfc.scale_mix;
+    var xfc_shear_mix = xfc.shear_mix;
+    var anim_xfc = anim && anim.xfcs[xfc_key];
+    if (anim_xfc) {
+      keyframe_index = spine.Keyframe.find(anim_xfc.xfc_keyframes, time);
+      if (keyframe_index !== -1) {
+        var xfc_keyframe0 = anim_xfc.xfc_keyframes[keyframe_index];
+        var xfc_keyframe1 = anim_xfc.xfc_keyframes[keyframe_index + 1];
+        if (xfc_keyframe1) {
+          pct = xfc_keyframe0.curve.evaluate((time - xfc_keyframe0.time) / (xfc_keyframe1.time - xfc_keyframe0.time));
+          xfc_position_mix = spine.tween(xfc_keyframe0.position_mix, xfc_keyframe1.position_mix, pct);
+          xfc_rotation_mix = spine.tween(xfc_keyframe0.rotation_mix, xfc_keyframe1.rotation_mix, pct);
+          xfc_scale_mix = spine.tween(xfc_keyframe0.scale_mix, xfc_keyframe1.scale_mix, pct);
+          xfc_shear_mix = spine.tween(xfc_keyframe0.shear_mix, xfc_keyframe1.shear_mix, pct);
+        } else {
+          xfc_position_mix = xfc_keyframe0.position_mix;
+          xfc_rotation_mix = xfc_keyframe0.rotation_mix;
+          xfc_scale_mix = xfc_keyframe0.scale_mix;
+          xfc_shear_mix = xfc_keyframe0.shear_mix;
+        }
+      }
+    }
+    var xfc_target = pose.bones[xfc.target_key];
+    var xfc_position = xfc.position;
+    var xfc_rotation = xfc.rotation;
+    var xfc_scale = xfc.scale;
+    var xfc_shear = xfc.shear;
+    var xfc_world_position = spine.Space.transform(xfc_target.world_space, xfc_position, new spine.Vector());
+    xfc.bone_keys.forEach(function(bone_key) {
+      var xfc_bone = pose.bones[bone_key];
+      xfc_bone.world_space.position.tween(xfc_world_position, xfc_position_mix, xfc_bone.world_space.position);
+    });
   });
   data.slot_keys.forEach(function(slot_key) {
     var data_slot = data.slots[slot_key];
@@ -22663,15 +24425,9 @@ spine.Pose.prototype.strike = function() {
         var color_keyframe1 = anim_slot.color_keyframes[keyframe_index + 1];
         if (color_keyframe1) {
           pct = color_keyframe0.curve.evaluate((time - color_keyframe0.time) / (color_keyframe1.time - color_keyframe0.time));
-          pose_slot.color.r = spine.tween(color_keyframe0.color.r, color_keyframe1.color.r, pct);
-          pose_slot.color.g = spine.tween(color_keyframe0.color.g, color_keyframe1.color.g, pct);
-          pose_slot.color.b = spine.tween(color_keyframe0.color.b, color_keyframe1.color.b, pct);
-          pose_slot.color.a = spine.tween(color_keyframe0.color.a, color_keyframe1.color.a, pct);
+          color_keyframe0.color.tween(color_keyframe1.color, pct, pose_slot.color);
         } else {
-          pose_slot.color.r = color_keyframe0.color.r;
-          pose_slot.color.g = color_keyframe0.color.g;
-          pose_slot.color.b = color_keyframe0.color.b;
-          pose_slot.color.a = color_keyframe0.color.a;
+          pose_slot.color.copy(color_keyframe0.color);
         }
       }
       keyframe_index = spine.Keyframe.find(anim_slot.attachment_keyframes, time);
@@ -22696,6 +24452,66 @@ spine.Pose.prototype.strike = function() {
       });
     }
   }
+  data.ptc_keys.forEach(function(ptc_key) {
+    var ptc = data.ptcs[ptc_key];
+    var ptc_spacing_mode = ptc.spacing_mode;
+    var ptc_spacing = ptc.spacing;
+    var ptc_position_mode = ptc.position_mode;
+    var ptc_position_mix = ptc.position_mix;
+    var ptc_position = ptc.position;
+    var ptc_rotation_mode = ptc.rotation_mode;
+    var ptc_rotation_mix = ptc.rotation_mix;
+    var ptc_rotation = ptc.rotation;
+    var anim_ptc = anim && anim.ptcs[ptc_key];
+    if (anim_ptc) {
+      keyframe_index = spine.Keyframe.find(anim_ptc.ptc_spacing_keyframes, time);
+      if (keyframe_index !== -1) {
+        var ptc_spacing_keyframe0 = anim_ptc.ptc_spacing_keyframes[keyframe_index];
+        var ptc_spacing_keyframe1 = anim_ptc.ptc_spacing_keyframes[keyframe_index + 1];
+        if (ptc_spacing_keyframe1) {
+          pct = ptc_spacing_keyframe0.curve.evaluate((time - ptc_spacing_keyframe0.time) / (ptc_spacing_keyframe1.time - ptc_spacing_keyframe0.time));
+          ptc_spacing = spine.tween(ptc_spacing_keyframe0.spacing, ptc_spacing_keyframe1.spacing, pct);
+        } else {
+          ptc_spacing = ptc_spacing_keyframe0.spacing;
+        }
+      }
+      keyframe_index = spine.Keyframe.find(anim_ptc.ptc_position_keyframes, time);
+      if (keyframe_index !== -1) {
+        var ptc_position_keyframe0 = anim_ptc.ptc_position_keyframes[keyframe_index];
+        var ptc_position_keyframe1 = anim_ptc.ptc_position_keyframes[keyframe_index + 1];
+        if (ptc_position_keyframe1) {
+          pct = ptc_position_keyframe0.curve.evaluate((time - ptc_position_keyframe0.time) / (ptc_position_keyframe1.time - ptc_position_keyframe0.time));
+          ptc_position_mix = spine.tween(ptc_position_keyframe0.position_mix, ptc_position_keyframe1.position_mix, pct);
+          ptc_position = spine.tween(ptc_position_keyframe0.position, ptc_position_keyframe1.position, pct);
+        } else {
+          ptc_position_mix = ptc_position_keyframe0.position_mix;
+          ptc_position = ptc_position_keyframe0.position;
+        }
+      }
+      keyframe_index = spine.Keyframe.find(anim_ptc.ptc_rotation_keyframes, time);
+      if (keyframe_index !== -1) {
+        var ptc_rotation_keyframe0 = anim_ptc.ptc_rotation_keyframes[keyframe_index];
+        var ptc_rotation_keyframe1 = anim_ptc.ptc_rotation_keyframes[keyframe_index + 1];
+        if (ptc_rotation_keyframe1) {
+          pct = ptc_rotation_keyframe0.curve.evaluate((time - ptc_rotation_keyframe0.time) / (ptc_rotation_keyframe1.time - ptc_rotation_keyframe0.time));
+          ptc_rotation_mix = spine.tween(ptc_rotation_keyframe0.rotation_mix, ptc_rotation_keyframe1.rotation_mix, pct);
+          ptc_rotation = spine.tween(ptc_rotation_keyframe0.rotation, ptc_rotation_keyframe1.rotation, pct);
+        } else {
+          ptc_rotation_mix = ptc_rotation_keyframe0.rotation_mix;
+          ptc_rotation = ptc_rotation_keyframe0.rotation;
+        }
+      }
+    }
+    var skin = data && data.skins[pose.skin_key];
+    var default_skin = data && data.skins['default'];
+    var slot_key = ptc.target_key;
+    var pose_slot = pose.slots[slot_key];
+    var skin_slot = skin && (skin.slots[slot_key] || default_skin.slots[slot_key]);
+    var ptc_target = skin_slot && skin_slot.attachments[pose_slot.attachment_key];
+    ptc.bone_keys.forEach(function(bone_key) {
+      var ptc_bone = pose.bones[bone_key];
+    });
+  });
   pose.events.length = 0;
   if (anim && anim.event_keyframes) {
     var add_event = function(event_keyframe) {
@@ -22767,306 +24583,13 @@ spine.Pose.prototype.iterateAttachments = function(callback) {
     var skin_slot = skin && (skin.slots[slot_key] || default_skin.slots[slot_key]);
     var attachment = skin_slot && skin_slot.attachments[pose_slot.attachment_key];
     var attachment_key = (attachment && (attachment.path || attachment.name)) || pose_slot.attachment_key;
+    if (attachment && ((attachment.type === 'linkedmesh') || (attachment.type === 'weightedlinkedmesh'))) {
+      attachment_key = attachment && (attachment.path || attachment.parent_key);
+      attachment = skin_slot && skin_slot.attachments[attachment_key];
+    }
     callback(slot_key, pose_slot, skin_slot, attachment_key, attachment);
   });
 }
-spine.deprecated = function() {
-  console.log("deprecated");
-}
-Object.defineProperty(spine, 'color', {
-  get: function() {
-    spine.deprecated();
-    return spine.Color;
-  }
-});
-Object.defineProperty(spine, 'skel_bone', {
-  get: function() {
-    spine.deprecated();
-    return spine.Bone;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'x', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.local_space.position.x;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'y', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.local_space.position.y;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'rotation', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.local_space.rotation.deg;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'scaleX', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.local_space.scale.x;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'scaleY', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.local_space.scale.y;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'parent', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.parent_key;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'inheritRotation', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.inherit_rotation;
-  }
-});
-Object.defineProperty(spine.Bone.prototype, 'inheritScale', {
-  get: /** @this {spine.Bone} */ function() {
-    spine.deprecated();
-    return this.inherit_scale;
-  }
-});
-Object.defineProperty(spine, 'skel_slot', {
-  get: function() {
-    spine.deprecated();
-    return spine.Slot;
-  }
-});
-Object.defineProperty(spine.Slot.prototype, 'bone', {
-  get: /** @this {spine.Slot} */ function() {
-    spine.deprecated();
-    return this.bone_key;
-  }
-});
-Object.defineProperty(spine.Slot.prototype, 'attachment', {
-  get: /** @this {spine.Slot} */ function() {
-    spine.deprecated();
-    return this.attachment_key;
-  }
-});
-Object.defineProperty(spine.Slot.prototype, 'additive', {
-  get: /** @this {spine.Slot} */ function() {
-    spine.deprecated();
-    return this.blend === 'additive';
-  }
-});
-Object.defineProperty(spine, 'attachment', {
-  get: function() {
-    spine.deprecated();
-    return spine.RegionAttachment;
-  }
-});
-Object.defineProperty(spine.RegionAttachment.prototype, 'x', {
-  get: /** @this {spine.RegionAttachment} */ function() {
-    spine.deprecated();
-    return this.local_space.position.x;
-  }
-});
-Object.defineProperty(spine.RegionAttachment.prototype, 'y', {
-  get: /** @this {spine.RegionAttachment} */ function() {
-    spine.deprecated();
-    return this.local_space.position.y;
-  }
-});
-Object.defineProperty(spine.RegionAttachment.prototype, 'rotation', {
-  get: /** @this {spine.RegionAttachment} */ function() {
-    spine.deprecated();
-    return this.local_space.rotation.deg;
-  }
-});
-Object.defineProperty(spine.RegionAttachment.prototype, 'scaleX', {
-  get: /** @this {spine.RegionAttachment} */ function() {
-    spine.deprecated();
-    return this.local_space.scale.x;
-  }
-});
-Object.defineProperty(spine.RegionAttachment.prototype, 'scaleY', {
-  get: /** @this {spine.RegionAttachment} */ function() {
-    spine.deprecated();
-    return this.local_space.scale.y;
-  }
-});
-Object.defineProperty(spine, 'skin_slot', {
-  get: function() {
-    spine.deprecated();
-    return spine.SkinSlot;
-  }
-});
-Object.defineProperty(spine.SkinSlot.prototype, 'skin_attachments', {
-  get: /** @this {spine.SkinSlot} */ function() {
-    spine.deprecated();
-    return this.attachments;
-  }
-});
-Object.defineProperty(spine, 'skin', {
-  get: function() {
-    spine.deprecated();
-    return spine.Skin;
-  }
-});
-Object.defineProperty(spine.Skin.prototype, 'skin_slots', {
-  get: /** @this {spine.Skin} */ function() {
-    spine.deprecated();
-    return this.slots;
-  }
-});
-Object.defineProperty(spine, 'event', {
-  get: function() {
-    spine.deprecated();
-    return spine.Event;
-  }
-});
-Object.defineProperty(spine, 'keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.Keyframe;
-  }
-});
-Object.defineProperty(spine, 'bone_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.BoneKeyframe;
-  }
-});
-Object.defineProperty(spine, 'translate_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.TranslateKeyframe;
-  }
-});
-Object.defineProperty(spine, 'rotate_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.RotateKeyframe;
-  }
-});
-Object.defineProperty(spine, 'scale_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.ScaleKeyframe;
-  }
-});
-Object.defineProperty(spine, 'anim_bone', {
-  get: function() {
-    spine.deprecated();
-    return spine.AnimBone;
-  }
-});
-Object.defineProperty(spine, 'slot_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.SlotKeyframe;
-  }
-});
-Object.defineProperty(spine, 'color_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.ColorKeyframe;
-  }
-});
-Object.defineProperty(spine, 'attachment_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.AttachmentKeyframe;
-  }
-});
-Object.defineProperty(spine, 'anim_slot', {
-  get: function() {
-    spine.deprecated();
-    return spine.AnimSlot;
-  }
-});
-Object.defineProperty(spine, 'event_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.EventKeyframe;
-  }
-});
-Object.defineProperty(spine, 'slot_offset', {
-  get: function() {
-    spine.deprecated();
-    return spine.SlotOffset;
-  }
-});
-Object.defineProperty(spine, 'order_keyframe', {
-  get: function() {
-    spine.deprecated();
-    return spine.OrderKeyframe;
-  }
-});
-Object.defineProperty(spine, 'animation', {
-  get: function() {
-    spine.deprecated();
-    return spine.Animation;
-  }
-});
-Object.defineProperty(spine.Animation.prototype, 'anim_bones', {
-  get: /** @this {spine.Animation} */ function() {
-    spine.deprecated();
-    return this.bones;
-  }
-});
-Object.defineProperty(spine.Animation.prototype, 'anim_slots', {
-  get: /** @this {spine.Animation} */ function() {
-    spine.deprecated();
-    return this.slots;
-  }
-});
-Object.defineProperty(spine, 'skeleton', {
-  get: function() {
-    spine.deprecated();
-    return spine.Skeleton;
-  }
-});
-Object.defineProperty(spine, 'data', {
-  get: function() {
-    spine.deprecated();
-    return spine.Data;
-  }
-});
-Object.defineProperty(spine.Data.prototype, 'animations', {
-  get: /** @this {spine.Data} */ function() {
-    spine.deprecated();
-    return this.anims;
-  }
-});
-Object.defineProperty(spine, 'pose', {
-  get: function() {
-    spine.deprecated();
-    return spine.Pose;
-  }
-});
-Object.defineProperty(spine.Pose.prototype, 'tweened_skel_bones', {
-  get: /** @this {spine.Pose} */ function() {
-    spine.deprecated();
-    return this.bones;
-  }
-});
-Object.defineProperty(spine.Pose.prototype, 'tweened_skel_slots', {
-  get: /** @this {spine.Pose} */ function() {
-    spine.deprecated();
-    return this.slots;
-  }
-});
-Object.defineProperty(spine.Pose.prototype, 'tweened_skel_slot_keys', {
-  get: /** @this {spine.Pose} */ function() {
-    spine.deprecated();
-    return this.slot_keys;
-  }
-});
-Object.defineProperty(spine.Pose.prototype, 'tweened_events', {
-  get: /** @this {spine.Pose} */ function() {
-    spine.deprecated();
-    return this.events;
-  }
-});
 goog.provide('RenderCtx2D');
 /**
  * @constructor
@@ -23117,7 +24640,7 @@ RenderCtx2D.prototype.loadData = function(spine_data, atlas_data, images) {
           var vertex_texcoord = attachment_info.vertex_texcoord = new Float32Array(attachment.uvs);
           var vertex_triangle = attachment_info.vertex_triangle = new Uint16Array(attachment.triangles);
           break;
-        case 'skinnedmesh':
+        case 'weightedmesh':
           var slot_info = slot_info_map[slot_key] = slot_info_map[slot_key] || {};
           var attachment_info_map = slot_info.attachment_info_map = slot_info.attachment_info_map || {};
           var attachment_info = attachment_info_map[attachment_key] = {};
@@ -23161,14 +24684,14 @@ RenderCtx2D.prototype.loadData = function(spine_data, atlas_data, images) {
  */
 RenderCtx2D.prototype.updatePose = function(spine_pose, atlas_data) {
   var render = this;
+  var default_skin_info = render.skin_info_map['default'];
   spine_pose.iterateAttachments(function(slot_key, slot, skin_slot, attachment_key, attachment) {
     if (!attachment) {
       return;
     }
     switch (attachment.type) {
       case 'mesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         var anim = spine_pose.data.anims[spine_pose.anim_key];
@@ -23193,9 +24716,8 @@ RenderCtx2D.prototype.updatePose = function(spine_pose, atlas_data) {
           }
         }
         break;
-      case 'skinnedmesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+      case 'weightedmesh':
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         var anim = spine_pose.data.anims[spine_pose.anim_key];
@@ -23277,6 +24799,7 @@ RenderCtx2D.prototype.updatePose = function(spine_pose, atlas_data) {
 RenderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
   var render = this;
   var ctx = render.ctx;
+  var default_skin_info = render.skin_info_map['default'];
   render.updatePose(spine_pose, atlas_data);
   spine_pose.iterateAttachments(function(slot_key, slot, skin_slot, attachment_key, attachment) {
     if (!attachment) {
@@ -23296,17 +24819,17 @@ RenderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
     ctx.globalAlpha *= slot.color.a;
     switch (slot.blend) {
       default:
-        case 'normal':
+      case 'normal':
         ctx.globalCompositeOperation = 'source-over';
-      break;
+        break;
       case 'additive':
-          ctx.globalCompositeOperation = 'lighter';
+        ctx.globalCompositeOperation = 'lighter';
         break;
       case 'multiply':
-          ctx.globalCompositeOperation = 'multiply';
+        ctx.globalCompositeOperation = 'multiply';
         break;
       case 'screen':
-          ctx.globalCompositeOperation = 'screen';
+        ctx.globalCompositeOperation = 'screen';
         break;
     }
     switch (attachment.type) {
@@ -23316,24 +24839,25 @@ RenderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
         ctxApplySpace(ctx, attachment.local_space);
         ctxApplyAtlasSitePosition(ctx, site);
         ctx.scale(attachment.width / 2, attachment.height / 2);
+        ctx.globalAlpha *= attachment.color.a;
         ctxDrawImageMesh(ctx, render.region_vertex_triangle, render.region_vertex_position, render.region_vertex_texcoord, image, site, page);
         break;
       case 'mesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         var bone = spine_pose.bones[slot.bone_key];
         ctxApplySpace(ctx, bone.world_space);
         ctxApplyAtlasSitePosition(ctx, site);
+        ctx.globalAlpha *= attachment.color.a;
         ctxDrawImageMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, attachment_info.vertex_texcoord, image, site, page);
         break;
-      case 'skinnedmesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+      case 'weightedmesh':
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         ctxApplyAtlasSitePosition(ctx, site);
+        ctx.globalAlpha *= attachment.color.a;
         ctxDrawImageMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_blend_position, attachment_info.vertex_texcoord, image, site, page);
         break;
     }
@@ -23348,6 +24872,9 @@ RenderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
 RenderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
   var render = this;
   var ctx = render.ctx;
+  var default_skin_info = render.skin_info_map['default'];
+  var stroke_style = 'rgba(255,255,255,1.0)';
+  var fill_style;// = 'rgba(255,255,255,0.25)';
   render.updatePose(spine_pose, atlas_data);
   spine_pose.iterateAttachments(function(slot_key, slot, skin_slot, attachment_key, attachment) {
     if (!attachment) {
@@ -23363,9 +24890,11 @@ RenderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
         ctxApplyAtlasSitePosition(ctx, site);
         ctx.beginPath();
         ctx.rect(-attachment.width / 2, -attachment.height / 2, attachment.width, attachment.height);
-        ctx.fillStyle = 'rgba(127,127,127,0.25)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(127,127,127,1.0)';
+        if (fill_style) {
+          ctx.fillStyle = fill_style;
+          ctx.fill();
+        }
+        ctx.strokeStyle = stroke_style;
         ctx.stroke();
         break;
       case 'boundingbox':
@@ -23381,35 +24910,30 @@ RenderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
           }
         });
         ctx.closePath();
-        ctx.strokeStyle = 'yellow';
+        ctx.strokeStyle = 'cyan';
         ctx.stroke();
         break;
       case 'mesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         var bone = spine_pose.bones[slot.bone_key];
         ctxApplySpace(ctx, bone.world_space);
         ctxApplyAtlasSitePosition(ctx, site);
-        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, 'rgba(127,127,127,1.0)', 'rgba(127,127,127,0.25)');
+        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, stroke_style, fill_style);
         break;
-      case 'skinnedmesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+      case 'weightedmesh':
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         ctxApplyAtlasSitePosition(ctx, site);
-        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_blend_position, 'rgba(127,127,127,1.0)', 'rgba(127,127,127,0.25)');
+        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_blend_position, stroke_style, fill_style);
         break;
     }
     ctx.restore();
   });
   spine_pose.iterateBones(function(bone_key, bone) {
-    ctx.save();
-    ctxApplySpace(ctx, bone.world_space);
-    ctxDrawPoint(ctx);
-    ctx.restore();
+    ctxDrawBone(ctx, bone_key, bone);
   });
   ctxDrawIkConstraints(ctx, spine_pose.data, spine_pose.bones);
 }
@@ -23421,6 +24945,9 @@ RenderCtx2D.prototype.drawDebugPose = function(spine_pose, atlas_data) {
 RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
   var render = this;
   var ctx = render.ctx;
+  var default_skin_info = render.skin_info_map['default'];
+  var stroke_style = 'rgba(255,255,255,1.0)';
+  var fill_style;// = 'rgba(255,255,255,0.25)';
   spine_pose.data.iterateAttachments(spine_pose.skin_key, function(slot_key, slot, skin_slot, attachment_key, attachment) {
     if (!attachment) {
       return;
@@ -23429,15 +24956,17 @@ RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
     ctx.save();
     switch (attachment.type) {
       case 'region':
-        var bone = spine_pose.bones[slot.bone_key];
+        var bone = spine_pose.data.bones[slot.bone_key];
         ctxApplySpace(ctx, bone.world_space);
         ctxApplySpace(ctx, attachment.local_space);
         ctxApplyAtlasSitePosition(ctx, site);
         ctx.beginPath();
         ctx.rect(-attachment.width / 2, -attachment.height / 2, attachment.width, attachment.height);
-        ctx.fillStyle = 'rgba(127,127,127,0.25)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(127,127,127,1.0)';
+        if (fill_style) {
+          ctx.fillStyle = fill_style;
+          ctx.fill();
+        }
+        ctx.strokeStyle = stroke_style;
         ctx.stroke();
         break;
       case 'boundingbox':
@@ -23453,43 +24982,79 @@ RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
           }
         });
         ctx.closePath();
-        ctx.strokeStyle = 'yellow';
+        ctx.strokeStyle = 'cyan';
         ctx.stroke();
         break;
       case 'mesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         var bone = spine_pose.data.bones[slot.bone_key];
         ctxApplySpace(ctx, bone.world_space);
         ctxApplyAtlasSitePosition(ctx, site);
-        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, 'rgba(127,127,127,1.0)', 'rgba(127,127,127,0.25)');
+        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_position, stroke_style, fill_style);
         break;
-      case 'skinnedmesh':
-        var skin_info = render.skin_info_map[spine_pose.skin_key],
-          default_skin_info = render.skin_info_map['default'];
+      case 'weightedmesh':
+        var skin_info = render.skin_info_map[spine_pose.skin_key];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
         var attachment_info = slot_info.attachment_info_map[attachment_key];
         ctxApplyAtlasSitePosition(ctx, site);
-        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_setup_position, 'rgba(127,127,127,1.0)', 'rgba(127,127,127,0.25)');
+        ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_setup_position, stroke_style, fill_style);
+        break;
+      case 'path':
+        if (attachment.vertices.length === attachment.vertex_count * 2) {
+          var bone = spine_pose.data.bones[slot.bone_key];
+          ctxApplySpace(ctx, bone.world_space);
+          var count = attachment.vertices.length / 6;
+          ctx.beginPath();
+          var x = attachment.vertices[2];
+          var y = attachment.vertices[3];
+          ctx.moveTo(x, y);
+          for (var index = 1; index < (count + 1); ++index) {
+            var x0 = attachment.vertices[(index*6 - 2) % attachment.vertices.length];
+            var y0 = attachment.vertices[(index*6 - 1) % attachment.vertices.length];
+            var x1 = attachment.vertices[(index*6 + 0) % attachment.vertices.length];
+            var y1 = attachment.vertices[(index*6 + 1) % attachment.vertices.length];
+            var x2 = attachment.vertices[(index*6 + 2) % attachment.vertices.length];
+            var y2 = attachment.vertices[(index*6 + 3) % attachment.vertices.length];
+            ctx.bezierCurveTo(x0, y0, x1, y1, x2, y2);
+          }
+          ctx.closePath();
+          ctx.strokeStyle = 'orange';
+          ctx.stroke();
+          ctx.beginPath();
+          for (var index = 0; index < count; ++index) {
+            var x = attachment.vertices[index*6 + 0];
+            var y = attachment.vertices[index*6 + 1];
+            ctx.moveTo(x, y);
+            var x = attachment.vertices[index*6 + 4];
+            var y = attachment.vertices[index*6 + 5];
+            ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = 'white';
+          ctx.stroke();
+        } else {
+        }
         break;
     }
     ctx.restore();
   });
   spine_pose.data.iterateBones(function(bone_key, bone) {
-    ctx.save();
-    ctxApplySpace(ctx, bone.world_space);
-    ctxDrawPoint(ctx);
-    ctx.restore();
+    ctxDrawBone(ctx, bone_key, bone);
   });
   ctxDrawIkConstraints(ctx, spine_pose.data, spine_pose.data.bones);
+}
+function ctxApplyAffine(ctx, affine) {
+  if (affine) {
+    ctx.transform(affine.matrix.a, affine.matrix.c, affine.matrix.b, affine.matrix.d, affine.vector.x, affine.vector.y);
+  }
 }
 function ctxApplySpace(ctx, space) {
   if (space) {
     ctx.translate(space.position.x, space.position.y);
     ctx.rotate(space.rotation.rad);
-    ctx.scale(space.scale.x, space.scale.y);
+    ctx.transform(space.shear.x.cos, space.shear.x.sin, -space.shear.y.sin, space.shear.y.cos, 0, 0);
+    ctx.transform(space.scale.a, space.scale.c, space.scale.b, space.scale.d, 0, 0);
   }
 }
 function ctxApplyAtlasSitePosition(ctx, site) {
@@ -23557,25 +25122,19 @@ function ctxDrawImageMesh(ctx, triangles, positions, texcoords, image, site, pag
   for (var index = 0; index < triangles.length;) {
     var triangle = triangles[index++] * 2;
     var position = positions.subarray(triangle, triangle + 2);
-    var x0 = position[0],
-      y0 = position[1];
+    var x0 = position[0], y0 = position[1];
     var texcoord = mat3x3Transform(site_texmatrix, texcoords.subarray(triangle, triangle + 2), site_texcoord);
-    var u0 = texcoord[0],
-      v0 = texcoord[1];
+    var u0 = texcoord[0], v0 = texcoord[1];
     var triangle = triangles[index++] * 2;
     var position = positions.subarray(triangle, triangle + 2);
-    var x1 = position[0],
-      y1 = position[1];
+    var x1 = position[0], y1 = position[1];
     var texcoord = mat3x3Transform(site_texmatrix, texcoords.subarray(triangle, triangle + 2), site_texcoord);
-    var u1 = texcoord[0],
-      v1 = texcoord[1];
+    var u1 = texcoord[0], v1 = texcoord[1];
     var triangle = triangles[index++] * 2;
     var position = positions.subarray(triangle, triangle + 2);
-    var x2 = position[0],
-      y2 = position[1];
+    var x2 = position[0], y2 = position[1];
     var texcoord = mat3x3Transform(site_texmatrix, texcoords.subarray(triangle, triangle + 2), site_texcoord);
-    var u2 = texcoord[0],
-      v2 = texcoord[1];
+    var u2 = texcoord[0], v2 = texcoord[1];
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x0, y0);
@@ -23603,6 +25162,32 @@ function ctxDrawImageMesh(ctx, triangles, positions, texcoords, image, site, pag
     ctx.restore();
   }
 }
+function ctxDrawBone(ctx, bone_key, bone) {
+  ctx.save();
+  ctxApplySpace(ctx, bone.world_space);
+  if (bone.length > 0) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.05 * bone.length, 0, 2 * Math.PI);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0.05 * bone.length, -0.05 * bone.length);
+    ctx.lineTo(bone.length, 0);
+    ctx.lineTo(0.05 * bone.length, 0.05 * bone.length);
+    ctx.closePath();
+  } else {
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, 2 * Math.PI);
+    ctx.moveTo(8, 0); ctx.lineTo(16, 0);
+    ctx.moveTo(-8, 0); ctx.lineTo(-16, 0);
+    ctx.moveTo(0, 8); ctx.lineTo(0, 16);
+    ctx.moveTo(0, -8); ctx.lineTo(0, -16);
+  }
+  ctx.strokeStyle = bone.color.toString();
+  ctx.stroke();
+  ctx.scale(1, -1);
+  ctx.fillStyle = 'black';
+  ctx.fillText(bone_key, 0, 0);
+  ctx.restore();
+}
 function ctxDrawIkConstraints(ctx, data, bones) {
   data.ikc_keys.forEach(function(ikc_key) {
     var ikc = data.ikcs[ikc_key];
@@ -23622,6 +25207,8 @@ function ctxDrawIkConstraints(ctx, data, bones) {
         ctx.save();
         ctxApplySpace(ctx, bone.world_space);
         ctxDrawCircle(ctx, 'yellow', 0.5);
+        ctx.translate(bone.length, 0);
+        ctxDrawCircle(ctx, 'yellow', 1.5);
         ctx.restore();
         break;
       case 2:
@@ -23640,6 +25227,8 @@ function ctxDrawIkConstraints(ctx, data, bones) {
         ctx.save();
         ctxApplySpace(ctx, child.world_space);
         ctxDrawCircle(ctx, 'yellow', 0.75);
+        ctx.translate(child.length, 0);
+        ctxDrawCircle(ctx, 'yellow', 1.5);
         ctx.restore();
         ctx.save();
         ctxApplySpace(ctx, parent.world_space);
@@ -23818,7 +25407,7 @@ RenderWebGL.prototype.dropData = function(spine_data, atlas_data) {
               });
             });
             break;
-          case 'skinnedmesh':
+          case 'weightedmesh':
             var gl_vertex = attachment_info.gl_vertex;
             gl.deleteBuffer(gl_vertex.position.buffer);
             gl.deleteBuffer(gl_vertex.blenders.buffer);
@@ -23894,7 +25483,7 @@ RenderWebGL.prototype.loadData = function(spine_data, atlas_data, images) {
             }
           });
           break;
-        case 'skinnedmesh':
+        case 'weightedmesh':
           var slot_info = slot_info_map[slot_key] = slot_info_map[slot_key] || {};
           var attachment_info_map = slot_info.attachment_info_map = slot_info.attachment_info_map || {};
           var attachment_info = attachment_info_map[attachment_key] = {};
@@ -23953,7 +25542,7 @@ RenderWebGL.prototype.loadData = function(spine_data, atlas_data, images) {
             vertex_position[vertex_position_offset++] = position_x;
             vertex_position[vertex_position_offset++] = position_y;
             if (blend_bone_index_array.length > render.gl_skin_shader_modelview_count) {
-              console.log("blend bone index array length for", attachmentPkey, "is", blend_bone_index_array.length, "greater than", render.gl_skin_shader_modelview_count);
+              console.log("blend bone index array length for", attachment_key, "is", blend_bone_index_array.length, "greater than", render.gl_skin_shader_modelview_count);
             }
           }
           var gl_vertex = attachment_info.gl_vertex = {};
@@ -24082,7 +25671,7 @@ RenderWebGL.prototype.loadData = function(spine_data, atlas_data, images) {
         switch (attachment.type) {
           case 'region':
           case 'mesh':
-          case 'skinnedmesh':
+          case 'weightedmesh':
             var image_key = attachment_key;
             var image = images[image_key];
             var gl_texture = render.gl_textures[image_key] = gl.createTexture();
@@ -24137,17 +25726,17 @@ RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
     gl.enable(gl.BLEND);
     switch (slot.blend) {
       default:
-        case 'normal':
+      case 'normal':
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      break;
+        break;
       case 'additive':
-          gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
         break;
       case 'multiply':
-          gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
+        gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
         break;
       case 'screen':
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
         break;
     }
     switch (attachment.type) {
@@ -24157,6 +25746,7 @@ RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
         mat3x3ApplySpace(gl_modelview, attachment.local_space);
         mat3x3Scale(gl_modelview, attachment.width / 2, attachment.height / 2);
         mat3x3ApplyAtlasSitePosition(gl_modelview, site);
+        vec4ApplyColor(gl_color, attachment.color);
         var gl_shader = render.gl_mesh_shader;
         var gl_vertex = render.gl_region_vertex;
         gl.useProgram(gl_shader.program);
@@ -24183,6 +25773,7 @@ RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
         var bone = spine_pose.bones[slot.bone_key];
         mat3x3ApplySpace(gl_modelview, bone.world_space);
         mat3x3ApplyAtlasSitePosition(gl_modelview, site);
+        vec4ApplyColor(gl_color, attachment.color);
         var anim = spine_pose.data.anims[spine_pose.anim_key];
         var anim_ffd = anim && anim.ffds && anim.ffds[spine_pose.skin_key];
         var ffd_slot = anim_ffd && anim_ffd.ffd_slots[slot_key];
@@ -24249,7 +25840,7 @@ RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
           gl.useProgram(null);
         }
         break;
-      case 'skinnedmesh':
+      case 'weightedmesh':
         var skin_info = render.skin_info_map[spine_pose.skin_key],
           default_skin_info = render.skin_info_map['default'];
         var slot_info = skin_info.slot_info_map[slot_key] || default_skin_info.slot_info_map[slot_key];
@@ -24268,6 +25859,7 @@ RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
             mat3x3ApplyAtlasSitePosition(modelview, site);
           }
         }
+        vec4ApplyColor(gl_color, attachment.color);
         var anim = spine_pose.data.anims[spine_pose.anim_key];
         var anim_ffd = anim && anim.ffds && anim.ffds[spine_pose.skin_key];
         var ffd_slot = anim_ffd && anim_ffd.ffd_slots[slot_key];
@@ -24370,6 +25962,30 @@ function mat3x3Copy(m, other) {
   m.set(other);
   return m;
 }
+function mat3x3Multiply2x2(m, a, b, c, d) {
+  var a00 = m[0], a01 = m[1], a02 = m[2]; // col 0
+  var a10 = m[3], a11 = m[4], a12 = m[5]; // col 1
+  m[0] = a * a00 + c * a10;
+  m[1] = a * a01 + c * a11;
+  m[2] = a * a02 + c * a12;
+  m[3] = b * a00 + d * a10;
+  m[4] = b * a01 + d * a11;
+  m[5] = b * a02 + d * a12;
+  return m;
+}
+function mat3x3MultiplyAffine(m, a, b, c, d, x, y) {
+  var a00 = m[0], a01 = m[1], a02 = m[2]; // col 0
+  var a10 = m[3], a11 = m[4], a12 = m[5]; // col 1
+  m[0] = a * a00 + c * a10;
+  m[1] = a * a01 + c * a11;
+  m[2] = a * a02 + c * a12;
+  m[3] = b * a00 + d * a10;
+  m[4] = b * a01 + d * a11;
+  m[5] = b * a02 + d * a12;
+  m[6] += x * a00 + y * a10;
+  m[7] += x * a01 + y * a11;
+  return m;
+}
 function mat3x3Ortho(m, l, r, b, t) {
   var lr = 1 / (l - r);
   var bt = 1 / (b - t);
@@ -24385,10 +26001,8 @@ function mat3x3Translate(m, x, y) {
   return m;
 }
 function mat3x3RotateCosSin(m, c, s) {
-  var m0 = m[0],
-    m1 = m[1];
-  var m3 = m[3],
-    m4 = m[4];
+  var m0 = m[0], m1 = m[1];
+  var m3 = m[3], m4 = m[4];
   m[0] = m0 * c + m3 * s;
   m[1] = m1 * c + m4 * s;
   m[3] = m3 * c - m0 * s;
@@ -24416,11 +26030,18 @@ function mat3x3Transform(m, v, out) {
   out[1] = y * iw;
   return out;
 }
+function mat3x3ApplyAffine(m, affine) {
+  if (affine) {
+    mat3x3MultiplyAffine(m, affine.matrix.a, affine.matrix.b, affine.matrix.c, affine.matrix.d, affine.vector.x, affine.vector.y);
+  }
+  return m;
+}
 function mat3x3ApplySpace(m, space) {
   if (space) {
     mat3x3Translate(m, space.position.x, space.position.y);
-    mat3x3Rotate(m, space.rotation.rad);
-    mat3x3Scale(m, space.scale.x, space.scale.y);
+    mat3x3RotateCosSin(m, space.rotation.cos, space.rotation.sin);
+    mat3x3Multiply2x2(m, space.shear.x.cos, -space.shear.y.sin, space.shear.x.sin, space.shear.y.cos);
+    mat3x3Multiply2x2(m, space.scale.a, space.scale.b, space.scale.c, space.scale.d);
   }
   return m;
 }
@@ -24484,14 +26105,8 @@ function mat4x4Translate(m, x, y, z) {
   return m;
 }
 function mat4x4RotateCosSinZ(m, c, s) {
-  var a_x = m[0],
-    a_y = m[1],
-    a_z = m[2],
-    a_w = m[3];
-  var b_x = m[4],
-    b_y = m[5],
-    b_z = m[6],
-    b_w = m[7];
+  var a_x = m[0], a_y = m[1], a_z = m[2], a_w = m[3];
+  var b_x = m[4], b_y = m[5], b_z = m[6], b_w = m[7];
   m[0] = a_x * c + b_x * s;
   m[1] = a_y * c + b_y * s;
   m[2] = a_z * c + b_z * s;
