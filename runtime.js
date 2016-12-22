@@ -431,6 +431,17 @@ cr.plugins_.SpinePlugin = function(runtime) {
     return count > 0;
   }
 
+  Cnds.prototype.HasAnimLooped = function (name) {
+    var instance = this;
+    var count = 0;
+    if (instance.extra.spine_pose) {
+      if (!name || instance.extra.spine_pose.anim_key === name) {
+        return instance.extra.loop_count >= 1;
+      }
+    }
+    return false;
+  }
+
   pluginProto.cnds = new Cnds();
 
   //////////////////////////////////////

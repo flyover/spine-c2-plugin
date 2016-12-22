@@ -67,6 +67,9 @@ AddCondition(cnd_id++, cf_none, "Has looped N times", "Spine Conditions", "Anima
 AddStringParam("Name", "Enter animation event name.");
 AddCondition(cnd_id++, cf_none, "Event", "Spine Conditions", "Animation event {0} occurred", "Animation event has occurred.", "HasEventOccurred");
 
+AddStringParam("Name", "Enter animation name.");
+AddCondition(cnd_id++, cf_none, "Has anim looped", "Spine Conditions", "Animation {0} has looped", "Animation has looped.", "HasAnimLooped");
+
 ////////////////////////////////////////
 // Actions
 
