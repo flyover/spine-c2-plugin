@@ -72,12 +72,14 @@ cr.plugins_.SpinePlugin = function(runtime) {
     var anim_key = instance.properties[3] || "";
     var anim_rate = instance.properties[4] || 1.0;
     var anim_step = instance.properties[5] || 0.0;
+    var anim_loop = instance.properties[6] || 0;
     console.log("Spine Data URL", spine_url);
     console.log("Atlas Data URL", atlas_url);
     console.log("Skin Key", skin_key);
     console.log("Anim Key", anim_key);
     console.log("Anim Rate", anim_rate);
     console.log("Anim Step", anim_step);
+    console.log("Anim Loop", anim_loop);
 
     instance.extra.loading = true;
     instance.extra.spine_data = new spine.Data();
@@ -90,6 +92,7 @@ cr.plugins_.SpinePlugin = function(runtime) {
     instance.extra.anim_rate = anim_rate;
     instance.extra.anim_step = anim_step;
     instance.extra.anim_step_time = 0.0;
+    instance.extra.anim_loop = anim_loop;
 
     loadText(spine_url, function (err, text) {
       if (err) {
@@ -250,6 +253,10 @@ cr.plugins_.SpinePlugin = function(runtime) {
       var anim_length = instance.extra.anim_length = instance.extra.spine_pose.curAnimLength();
       if (((anim_time + anim_dt) < 0) || ((anim_time + anim_dt) > anim_length)) {
         ++instance.extra.loop_count;
+      }
+      if ((instance.extra.anim_loop > 0) && (instance.extra.loop_count >= instance.extra.anim_loop)) {
+        instance.extra.loop_count = instance.extra.anim_loop;
+        anim_dt = 0;
       }
       if (instance.extra.anim_step > 0) {
         instance.extra.anim_step_time += Math.abs(anim_dt);

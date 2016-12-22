@@ -167,7 +167,8 @@ var property_list = [
   new cr.Property(ept_text, "Skin Key", "", "Skin Key"),
   new cr.Property(ept_text, "Anim Key", "", "Anim Key"),
   new cr.Property(ept_float, "Anim Rate", 1.0, "Anim Rate"),
-  new cr.Property(ept_float, "Anim Step", 0.0, "Anim Step in milliseconds, 0.0 for continuous")
+  new cr.Property(ept_float, "Anim Step", 0.0, "Anim Step in milliseconds, 0.0 for continuous"),
+  new cr.Property(ept_integer, "Anim Loop", 0, "Anim Loop in number of loops, 0 for infinite")
 ];
 
 // Called by IDE when a new object type is to be created
