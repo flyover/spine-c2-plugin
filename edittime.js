@@ -112,6 +112,9 @@ AddAction(act_id++, af_none, "Set Step", "Spine Actions", "Set Step {0}", "Set t
 
 AddAction(act_id++, af_none, "Reset Loop Count", "Spine Actions", "Reset Loop Count", "Reset the animation loop count.", "ResetLoopCount");
 
+AddNumberParam("Loop", "Enter the loop.");
+AddAction(act_id++, af_none, "Set Loop", "Spine Actions", "Set Loop {0}", "Set the animation playback loop.", "SetLoop");
+
 ////////////////////////////////////////
 // Expressions
 

@@ -554,6 +554,11 @@ cr.plugins_.SpinePlugin = function(runtime) {
     instance.extra.anim_step = step;
   }
 
+  Acts.prototype.SetLoop = function (loop) {
+    var instance = this;
+    instance.extra.anim_loop = loop;
+  }
+
   Acts.prototype.ResetLoopCount = function () {
     var instance = this;
     instance.extra.loop_count = 0;
