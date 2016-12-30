@@ -5341,7 +5341,7 @@ spine.Skin.prototype.iterateAttachments = function(callback) {
     var skin_slot = skin.slots[slot_key];
     skin_slot.attachment_keys.forEach(function(attachment_key) {
       var attachment = skin_slot.attachments[attachment_key];
-      callback(slot_key, skin_slot, attachment.path || attachment.name || attachment_key, attachment);
+      callback(slot_key, skin_slot, attachment.name || attachment_key, attachment);
     });
   });
 }
@@ -6786,9 +6786,9 @@ spine.Data.prototype.iterateAttachments = function(skin_key, callback) {
     var data_slot = data.slots[slot_key];
     var skin_slot = skin && (skin.slots[slot_key] || default_skin.slots[slot_key]);
     var attachment = skin_slot && skin_slot.attachments[data_slot.attachment_key];
-    var attachment_key = (attachment && (attachment.path || attachment.name)) || data_slot.attachment_key;
+    var attachment_key = (attachment && attachment.name) || data_slot.attachment_key;
     if (attachment && ((attachment.type === 'linkedmesh') || (attachment.type === 'weightedlinkedmesh'))) {
-      attachment_key = attachment && (attachment.path || attachment.parent_key);
+      attachment_key = attachment && attachment.parent_key;
       attachment = skin_slot && skin_slot.attachments[attachment_key];
     }
     callback(slot_key, data_slot, skin_slot, attachment_key, attachment);
@@ -7530,9 +7530,9 @@ spine.Pose.prototype.iterateAttachments = function(callback) {
     var pose_slot = pose.slots[slot_key];
     var skin_slot = skin && (skin.slots[slot_key] || default_skin.slots[slot_key]);
     var attachment = skin_slot && skin_slot.attachments[pose_slot.attachment_key];
-    var attachment_key = (attachment && (attachment.path || attachment.name)) || pose_slot.attachment_key;
+    var attachment_key = (attachment && attachment.name) || pose_slot.attachment_key;
     if (attachment && ((attachment.type === 'linkedmesh') || (attachment.type === 'weightedlinkedmesh'))) {
-      attachment_key = attachment && (attachment.path || attachment.parent_key);
+      attachment_key = attachment && attachment.parent_key;
       attachment = skin_slot && skin_slot.attachments[attachment_key];
     }
     callback(slot_key, pose_slot, skin_slot, attachment_key, attachment);
@@ -7777,9 +7777,9 @@ RenderCtx2D.prototype.drawPose = function(spine_pose, atlas_data) {
       return;
     }
 
-    var site = atlas_data && atlas_data.sites[attachment_key];
+    var site = atlas_data && atlas_data.sites[attachment.path || attachment.name || attachment_key];
     var page = site && site.page;
-    var image_key = (page && page.name) || attachment_key;
+    var image_key = (page && page.name) || attachment.path || attachment.name || attachment_key;
     var image = render.images[image_key];
 
     if (!image || !image.complete) {
@@ -7994,43 +7994,6 @@ RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
         ctxApplyAtlasSitePosition(ctx, site);
         ctxDrawMesh(ctx, attachment_info.vertex_triangle, attachment_info.vertex_setup_position, stroke_style, fill_style);
         break;
-      case 'path':
-        if (attachment.vertices.length === attachment.vertex_count * 2) {
-          // non-weighted path
-          var bone = spine_pose.data.bones[slot.bone_key];
-          ctxApplySpace(ctx, bone.world_space);
-          var count = attachment.vertices.length / 6;
-          ctx.beginPath();
-          var x = attachment.vertices[2];
-          var y = attachment.vertices[3];
-          ctx.moveTo(x, y);
-          for (var index = 1; index < (count + 1); ++index) {
-            var x0 = attachment.vertices[(index*6 - 2) % attachment.vertices.length];
-            var y0 = attachment.vertices[(index*6 - 1) % attachment.vertices.length];
-            var x1 = attachment.vertices[(index*6 + 0) % attachment.vertices.length];
-            var y1 = attachment.vertices[(index*6 + 1) % attachment.vertices.length];
-            var x2 = attachment.vertices[(index*6 + 2) % attachment.vertices.length];
-            var y2 = attachment.vertices[(index*6 + 3) % attachment.vertices.length];
-            ctx.bezierCurveTo(x0, y0, x1, y1, x2, y2);
-          }
-          ctx.closePath();
-          ctx.strokeStyle = 'orange';
-          ctx.stroke();
-          ctx.beginPath();
-          for (var index = 0; index < count; ++index) {
-            var x = attachment.vertices[index*6 + 0];
-            var y = attachment.vertices[index*6 + 1];
-            ctx.moveTo(x, y);
-            var x = attachment.vertices[index*6 + 4];
-            var y = attachment.vertices[index*6 + 5];
-            ctx.lineTo(x, y);
-          }
-          ctx.strokeStyle = 'white';
-          ctx.stroke();
-        } else {
-          // weighted path
-        }
-        break;
     }
 
     ctx.restore();
@@ -8043,15 +8006,8 @@ RenderCtx2D.prototype.drawDebugData = function(spine_pose, atlas_data) {
   ctxDrawIkConstraints(ctx, spine_pose.data, spine_pose.data.bones);
 }
 
-function ctxApplyAffine(ctx, affine) {
-  if (affine) {
-    ctx.transform(affine.matrix.a, affine.matrix.c, affine.matrix.b, affine.matrix.d, affine.vector.x, affine.vector.y);
-  }
-}
-
 function ctxApplySpace(ctx, space) {
   if (space) {
-    //return ctxApplyAffine(ctx, space.updateAffine());
     ctx.translate(space.position.x, space.position.y);
     ctx.rotate(space.rotation.rad);
     ctx.transform(space.shear.x.cos, space.shear.x.sin, -space.shear.y.sin, space.shear.y.cos, 0, 0);
@@ -8608,17 +8564,21 @@ RenderWebGL.prototype.loadData = function(spine_data, atlas_data, images) {
                   var blender_count = attachment.vertices[index++];
                   var vertex_x = 0;
                   var vertex_y = 0;
+                  var morph_position = new spine.Vector();
                   for (var blender_index = 0; blender_index < blender_count; ++blender_index) {
                     var bone_index = attachment.vertices[index++];
                     var x = attachment.vertices[index++];
                     var y = attachment.vertices[index++];
                     var weight = attachment.vertices[index++];
-                    var morph_position_x = ffd_keyframe.vertices[ffd_index - ffd_keyframe.offset] || 0;
+                    morph_position.x = ffd_keyframe.vertices[ffd_index - ffd_keyframe.offset] || 0;
                     ++ffd_index;
-                    var morph_position_y = ffd_keyframe.vertices[ffd_index - ffd_keyframe.offset] || 0;
+                    morph_position.y = ffd_keyframe.vertices[ffd_index - ffd_keyframe.offset] || 0;
                     ++ffd_index;
-                    vertex_x += morph_position_x * weight;
-                    vertex_y += morph_position_y * weight;
+                    var bone_key = spine_data.bone_keys[bone_index];
+                    var bone = spine_data.bones[bone_key];
+                    spine.Matrix.transform(bone.world_space.updateAffine().matrix, morph_position, morph_position);
+                    vertex_x += morph_position.x * weight;
+                    vertex_y += morph_position.y * weight;
                   }
                   var vertex_offset = vertex_index * 2;
                   vertex[vertex_offset++] = vertex_x;
@@ -8767,9 +8727,9 @@ RenderWebGL.prototype.drawPose = function(spine_pose, atlas_data) {
       return;
     }
 
-    var site = atlas_data && atlas_data.sites[attachment_key];
+    var site = atlas_data && atlas_data.sites[attachment.path || attachment.name || attachment_key];
     var page = site && site.page;
-    var image_key = (page && page.name) || attachment_key;
+    var image_key = (page && page.name) || attachment.path || attachment.name || attachment_key;
     var gl_texture = render.gl_textures[image_key];
 
     if (!gl_texture) {
@@ -9099,20 +9059,6 @@ function mat3x3Multiply2x2(m, a, b, c, d) {
   return m;
 }
 
-function mat3x3MultiplyAffine(m, a, b, c, d, x, y) {
-  var a00 = m[0], a01 = m[1], a02 = m[2]; // col 0
-  var a10 = m[3], a11 = m[4], a12 = m[5]; // col 1
-  m[0] = a * a00 + c * a10;
-  m[1] = a * a01 + c * a11;
-  m[2] = a * a02 + c * a12;
-  m[3] = b * a00 + d * a10;
-  m[4] = b * a01 + d * a11;
-  m[5] = b * a02 + d * a12;
-  m[6] += x * a00 + y * a10;
-  m[7] += x * a01 + y * a11;
-  return m;
-}
-
 function mat3x3Ortho(m, l, r, b, t) {
   var lr = 1 / (l - r);
   var bt = 1 / (b - t);
@@ -9163,16 +9109,8 @@ function mat3x3Transform(m, v, out) {
   return out;
 }
 
-function mat3x3ApplyAffine(m, affine) {
-  if (affine) {
-    mat3x3MultiplyAffine(m, affine.matrix.a, affine.matrix.b, affine.matrix.c, affine.matrix.d, affine.vector.x, affine.vector.y);
-  }
-  return m;
-}
-
 function mat3x3ApplySpace(m, space) {
   if (space) {
-    //return mat3x3ApplyAffine(m, space.updateAffine());
     mat3x3Translate(m, space.position.x, space.position.y);
     mat3x3RotateCosSin(m, space.rotation.cos, space.rotation.sin);
     mat3x3Multiply2x2(m, space.shear.x.cos, -space.shear.y.sin, space.shear.x.sin, space.shear.y.cos);
@@ -9248,8 +9186,14 @@ function mat4x4Translate(m, x, y, z) {
 }
 
 function mat4x4RotateCosSinZ(m, c, s) {
-  var a_x = m[0], a_y = m[1], a_z = m[2], a_w = m[3];
-  var b_x = m[4], b_y = m[5], b_z = m[6], b_w = m[7];
+  var a_x = m[0],
+    a_y = m[1],
+    a_z = m[2],
+    a_w = m[3];
+  var b_x = m[4],
+    b_y = m[5],
+    b_z = m[6],
+    b_w = m[7];
   m[0] = a_x * c + b_x * s;
   m[1] = a_y * c + b_y * s;
   m[2] = a_z * c + b_z * s;
