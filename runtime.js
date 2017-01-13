@@ -57,13 +57,13 @@ cr.plugins_.SpinePlugin = function(runtime) {
     if (gl) {
       console.log("WebGL Enabled");
       console.log(gl.getParameter(gl.VERSION));
-      instance.extra.render_webgl = new RenderWebGL(gl);
+      instance.extra.render_webgl = new RenderWebGL.RenderWebGL(gl);
     }
 
     var ctx = this.runtime.ctx;
     if (ctx) {
       console.log("2D Context Enabled");
-      instance.extra.render_ctx2d = new RenderCtx2D(ctx);
+      instance.extra.render_ctx2d = new RenderCtx2D.RenderCtx2D(ctx);
     }
 
     var spine_url = instance.properties[0] || "";
@@ -82,8 +82,8 @@ cr.plugins_.SpinePlugin = function(runtime) {
     console.log("Anim Loop", anim_loop);
 
     instance.extra.loading = true;
-    instance.extra.spine_data = new spine.Data();
-    instance.extra.spine_pose = new spine.Pose(instance.extra.spine_data);
+    instance.extra.spine_data = new Spine.Data();
+    instance.extra.spine_pose = new Spine.Pose(instance.extra.spine_data);
     instance.extra.atlas_data = null;
     instance.extra.skin_key = skin_key;
     instance.extra.anim_key = anim_key;
@@ -149,7 +149,7 @@ cr.plugins_.SpinePlugin = function(runtime) {
         counter_inc();
 
         if (!err && text) {
-          instance.extra.atlas_data = new atlas.Data().import(text);
+          instance.extra.atlas_data = new Atlas.Data().import(text);
 
           // load atlas page images
           instance.extra.atlas_data.pages.forEach(function (page) {
@@ -329,8 +329,8 @@ cr.plugins_.SpinePlugin = function(runtime) {
 
       var gl = instance.runtime.gl;
 
-      var gl_projection = instance.extra.render_webgl.gl_projection;
-      var gl_color = instance.extra.render_webgl.gl_color;
+      var projection = instance.extra.render_webgl.projection;
+      var color = instance.extra.render_webgl.color;
 
       var flip_x = (this.width < 0)?(-1):(1);
       var flip_y = (this.height < 0)?(-1):(1);
@@ -340,12 +340,12 @@ cr.plugins_.SpinePlugin = function(runtime) {
       var sx = instance.width / instance.extra.spine_data.skeleton.width;
       var sy = -instance.height / instance.extra.spine_data.skeleton.height;
 
-      mat4.multiply(glw.matP, glw.matMV, gl_projection);
-      mat4x4Translate(gl_projection, tx, ty, 0.0);
-      mat4x4RotateZ(gl_projection, rz);
-      mat4x4Scale(gl_projection, sx, sy, 1.0);
+      mat4.multiply(glw.matP, glw.matMV, projection);
+      mat4x4Translate(projection, tx, ty, 0.0);
+      mat4x4RotateZ(projection, rz);
+      mat4x4Scale(projection, sx, sy, 1.0);
 
-      gl_color[3] = instance.opacity;
+      color[3] = instance.opacity;
 
       instance.extra.render_webgl.drawPose(instance.extra.spine_pose, instance.extra.atlas_data);
 
