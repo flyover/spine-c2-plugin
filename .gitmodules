@@ -1,0 +1,3 @@
+[submodule "spine.ts"]
+	path = spine.ts
+	url = ../spine.ts.git
