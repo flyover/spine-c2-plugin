@@ -341,9 +341,9 @@ cr.plugins_.SpinePlugin = function(runtime) {
       var sy = -instance.height / instance.extra.spine_data.skeleton.height;
 
       mat4.multiply(glw.matP, glw.matMV, projection);
-      mat4x4Translate(projection, tx, ty, 0.0);
-      mat4x4RotateZ(projection, rz);
-      mat4x4Scale(projection, sx, sy, 1.0);
+      RenderWebGL.mat4x4Translate(projection, tx, ty, 0.0);
+      RenderWebGL.mat4x4RotateZ(projection, rz);
+      RenderWebGL.mat4x4Scale(projection, sx, sy, 1.0);
 
       color[3] = instance.opacity;
 
