@@ -23152,12 +23152,12 @@ cr.plugins_.SpinePlugin = function(runtime) {
     if (gl) {
       console.log("WebGL Enabled");
       console.log(gl.getParameter(gl.VERSION));
-      instance.extra.render_webgl = new RenderWebGL(gl);
+      instance.extra.render_webgl = new RenderWebGL.RenderWebGL(gl);
     }
     var ctx = this.runtime.ctx;
     if (ctx) {
       console.log("2D Context Enabled");
-      instance.extra.render_ctx2d = new RenderCtx2D(ctx);
+      instance.extra.render_ctx2d = new RenderCtx2D.RenderCtx2D(ctx);
     }
     var spine_url = instance.properties[0] || "";
     var atlas_url = instance.properties[1] || "";
@@ -23226,7 +23226,7 @@ cr.plugins_.SpinePlugin = function(runtime) {
         }
         counter_inc();
         if (!err && text) {
-          instance.extra.atlas_data = new atlas.Data().import(text);
+          instance.extra.atlas_data = new Atlas.Data().import(text);
           instance.extra.atlas_data.pages.forEach(function (page) {
             var image_key = page.name;
             var image_url = image_key;
@@ -23360,9 +23360,9 @@ cr.plugins_.SpinePlugin = function(runtime) {
       var sx = instance.width / instance.extra.spine_data.skeleton.width;
       var sy = -instance.height / instance.extra.spine_data.skeleton.height;
       mat4.multiply(glw.matP, glw.matMV, projection);
-      mat4x4Translate(projection, tx, ty, 0.0);
-      mat4x4RotateZ(projection, rz);
-      mat4x4Scale(projection, sx, sy, 1.0);
+      RenderWebGL.mat4x4Translate(projection, tx, ty, 0.0);
+      RenderWebGL.mat4x4RotateZ(projection, rz);
+      RenderWebGL.mat4x4Scale(projection, sx, sy, 1.0);
       color[3] = instance.opacity;
       instance.extra.render_webgl.drawPose(instance.extra.spine_pose, instance.extra.atlas_data);
       glw.lastSrcBlend = gl.ONE;
