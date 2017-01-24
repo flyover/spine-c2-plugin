@@ -8,8 +8,6 @@
 ///export { RenderCtx2D as RenderCtx2D }
 ///export { RenderWebGL as RenderWebGL }
 
-declare function require(value: string): void;
-
 require("expose-loader?Spine!./spine.ts/spine");
 require("expose-loader?Atlas!./spine.ts/demo/atlas");
 require("expose-loader?RenderCtx2D!./spine.ts/demo/render-ctx2d");

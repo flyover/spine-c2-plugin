@@ -109,7 +109,7 @@ cr.plugins_.SpinePlugin = function(runtime) {
       //instance.set_bbox_changed();
 
       loadText(atlas_url, function (err, text) {
-        var images = {};
+        var images = new Spine.Map();
 
         var counter = 0;
         var counter_inc = function () { counter++; }
@@ -158,7 +158,7 @@ cr.plugins_.SpinePlugin = function(runtime) {
             console.log("Atlas Image URL", image_url);
 
             counter_inc();
-            images[image_key] = loadImage(image_url, (function (image_key) { return function (err, image) {
+            images.set(image_key, loadImage(image_url, (function (image_key) { return function (err, image) {
               if (err) {
                 console.log(err, text);
                 return;
@@ -166,7 +166,7 @@ cr.plugins_.SpinePlugin = function(runtime) {
 
               console.log("Atlas Image", image.width, "x", image.height, image.src);
               counter_dec();
-            }})(image_key));
+            }})(image_key)));
           });
         } else {
           // TODO: load attachment images
