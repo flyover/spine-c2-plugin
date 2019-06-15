@@ -1,6 +1,9 @@
+var path = require('path');
 module.exports = {
+  mode: 'production',
   entry: './common.ts',
   output: {
+    path: path.resolve(__dirname, '.'),
     filename: 'common.js'
   },
   resolve: {
